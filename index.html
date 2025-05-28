@@ -631,7 +631,6 @@
         class GameState {
             constructor() {
                 this.isPaused = false;
-                this.gameLoop = null;
                 this.scene = null;
             }
 
@@ -640,8 +639,6 @@
                 if (this.scene) {
                     this.scene.pause();
                 }
-                // Débloquer le pointeur de la souris
-                document.exitPointerLock();
             }
 
             resume() {
@@ -649,21 +646,6 @@
                 if (this.scene) {
                     this.scene.resume();
                 }
-                // Rebloquer le pointeur de la souris
-                const canvas = document.getElementById("renderCanvas");
-                if (canvas) {
-                    canvas.requestPointerLock();
-                }
-            }
-
-            startGameLoop() {
-                const animate = () => {
-                    if (!this.isPaused) {
-                        // Mettre à jour la logique du jeu ici
-                        this.gameLoop = requestAnimationFrame(animate);
-                    }
-                };
-                this.gameLoop = requestAnimationFrame(animate);
             }
 
             setScene(scene) {

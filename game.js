@@ -48,6 +48,42 @@ class Game {
         // 创建武器UI
         this.weaponUI = new WeaponUI(this.scene, this);
         
+        // 获取游戏状态管理器
+        this.gameState = window.gameState;
+        this.gameState.setScene(this.scene);
+        
+        // 初始化暂停菜单
+        this.pauseMenu = document.getElementById('pauseMenu');
+        
+        // 添加键盘事件监听
+        window.addEventListener('keydown', (event) => {
+            if (event.key.toLowerCase() === 'p') {
+                this.togglePause();
+            }
+        });
+
+        // 添加按钮事件监听
+        document.querySelector('.pause-button.resume').addEventListener('click', () => {
+            this.togglePause();
+        });
+
+        document.querySelector('.pause-button.settings').addEventListener('click', () => {
+            this.pauseMenu.classList.remove('active');
+            const settingsOverlay = document.querySelector('.settings-overlay');
+            const settingsContainer = document.querySelector('.settings-container');
+            settingsOverlay.style.display = 'flex';
+            setTimeout(() => {
+                settingsOverlay.style.opacity = '1';
+                settingsContainer.classList.add('active');
+            }, 10);
+        });
+
+        document.querySelector('.pause-button.quit').addEventListener('click', () => {
+            if (confirm('Voulez-vous vraiment quitter le jeu ?')) {
+                window.location.reload();
+            }
+        });
+        
         // 设置场景
         this.setupScene();
         
@@ -66,10 +102,36 @@ class Game {
         });
     }
 
+    togglePause() {
+        if (!this.gameState.isPaused) {
+            // Pause the game
+            this.gameState.pause();
+            // Show the pause menu
+            this.pauseMenu.style.display = 'flex';
+            setTimeout(() => {
+                this.pauseMenu.classList.add('active');
+            }, 10);
+            // Unlock the mouse
+            document.exitPointerLock();
+        } else {
+            // Resume the game
+            this.gameState.resume();
+            // Hide the pause menu
+            this.pauseMenu.classList.remove('active');
+            setTimeout(() => {
+                this.pauseMenu.style.display = 'none';
+            }, 300);
+            // Lock the mouse
+            this.canvas.requestPointerLock();
+        }
+    }
+
     startGameLoop() {
         this.engine.runRenderLoop(() => {
-            this.player.update();
-            this.update();
+            if (!this.gameState.isPaused) {
+                this.player.update();
+                this.update();
+            }
             this.scene.render();
         });
     }
@@ -98,6 +160,8 @@ class Game {
     }
 
     update() {
+        if (this.gameState.isPaused) return;
+
         // 检查碰撞
         const isOnPlatform = this.gameObjects.checkCollisions(
             this.player.mesh.position,
