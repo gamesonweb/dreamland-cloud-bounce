@@ -38,8 +38,8 @@ class Game {
             maxHealth: 100,
             exp: 0,
             level: 1,
-            expToNextLevel: 100,  // 升级所需经验
-            healthIncreasePerLevel: 20  // 每级增加的血量
+            expToNextLevel: 100,
+            healthIncreasePerLevel: 20
         };
         
         // 创建敌人系统
@@ -58,20 +58,20 @@ class Game {
         this.createExpUI();
         
         // 开始渲染循环
-        this.engine.runRenderLoop(() => {
-            this.player.update();
-            this.update();
-            this.scene.render();
-        });
+        this.startGameLoop();
         
         // 处理窗口大小变化
         window.addEventListener("resize", () => {
             this.engine.resize();
         });
-        
-        this.experience = 0;
-        this.level = 1;
-        this.levelDisplay = document.getElementById('levelDisplay');
+    }
+
+    startGameLoop() {
+        this.engine.runRenderLoop(() => {
+            this.player.update();
+            this.update();
+            this.scene.render();
+        });
     }
 
     setupScene() {

@@ -199,13 +199,13 @@ class Player {
             const currentSpeed = this.keys["shift"] ? this.sprintSpeed : this.moveSpeed;
 
             // 处理移动
-            if (this.keys["w"]) {
+            if (this.keys["z"]) {
                 this.playerVelocity.addInPlace(forward.scale(currentSpeed));
             }
             if (this.keys["s"]) {
                 this.playerVelocity.addInPlace(forward.scale(-currentSpeed));
             }
-            if (this.keys["a"]) {
+            if (this.keys["q"]) {
                 this.playerVelocity.addInPlace(right.scale(-currentSpeed));
             }
             if (this.keys["d"]) {

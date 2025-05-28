@@ -15,18 +15,838 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            background: #1a1a2e;
         }
+
+        #welcomeScreen {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ffd1dc 0%, #87ceeb 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease-out;
+            overflow: hidden;
+        }
+
+        #gameScreen {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        .title-container {
+            position: relative;
+            margin-bottom: 50px;
+            margin-top: -100px;
+        }
+
+        #gameTitle {
+            font-size: 7em;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 
+                0 0 20px rgba(255, 192, 203, 0.5),
+                0 0 40px rgba(255, 105, 180, 0.3),
+                0 0 60px rgba(255, 105, 180, 0.2);
+            margin: 0;
+            position: relative;
+            z-index: 2;
+            animation: wave 3s ease-in-out infinite;
+            background: linear-gradient(45deg, #ff69b4, #87ceeb, #ff69b4);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% 200%;
+            animation: gradient 5s ease infinite, wave 3s ease-in-out infinite;
+            letter-spacing: 2px;
+        }
+
+        .title-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(255, 105, 180, 0.3) 0%, transparent 70%);
+            filter: blur(20px);
+            z-index: 1;
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        .buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        #startButton, #settingsButton {
+            padding: 15px 40px;
+            font-size: 1.5em;
+            color: #fff;
+            background: linear-gradient(45deg, #ff69b4, #87ceeb);
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 2;
+            box-shadow: 0 0 20px rgba(255, 105, 180, 0.3);
+            min-width: 200px;
+        }
+
+        #startButton {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: buttonAppear 1s ease-out 0.5s forwards;
+        }
+
+        #settingsButton {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: buttonAppear 1s ease-out 0.7s forwards;
+        }
+
+        #startButton:hover, #settingsButton:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(255, 105, 180, 0.5);
+        }
+
+        #startButton::before, #settingsButton::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            filter: blur(5px);
+            opacity: 1;
+            animation: float linear infinite;
+            left: -20%; /* Position initiale plus proche */
+        }
+
+        .cloud::before,
+        .cloud::after {
+            content: '';
+            position: absolute;
+            background: inherit;
+            border-radius: 50%;
+        }
+
+        .cloud::before {
+            width: 50%;
+            height: 50%;
+            top: -25%;
+            left: 25%;
+        }
+
+        .cloud::after {
+            width: 30%;
+            height: 30%;
+            top: 35%;
+            left: 60%;
+        }
+
+        .heart {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 105, 180, 0.6);
+            transform: rotate(45deg);
+            z-index: 1;
+            opacity: 1;
+            animation: floatHeart linear infinite;
+            left: -20%; /* Position initiale plus proche */
+        }
+
+        .heart::before,
+        .heart::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: inherit;
+            border-radius: 50%;
+        }
+
+        .heart::before {
+            top: -10px;
+            left: 0;
+        }
+
+        .heart::after {
+            top: 0;
+            left: -10px;
+        }
+
+        @keyframes wave {
+            0%, 100% {
+                transform: translateY(0) skew(0deg);
+            }
+            25% {
+                transform: translateY(-10px) skew(2deg);
+            }
+            75% {
+                transform: translateY(10px) skew(-2deg);
+            }
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                opacity: 0.5;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.1);
+            }
+        }
+
+        @keyframes gradient {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        @keyframes shine {
+            0% {
+                transform: translateX(-100%) rotate(45deg);
+            }
+            100% {
+                transform: translateX(100%) rotate(45deg);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateX(0) translateY(var(--start-y)) scale(1);
+            }
+            100% {
+                transform: translateX(120vw) translateY(var(--start-y)) scale(1);
+            }
+        }
+
+        @keyframes floatHeart {
+            0% {
+                transform: translateX(0) translateY(var(--start-y)) rotate(45deg);
+            }
+            100% {
+                transform: translateX(120vw) translateY(var(--start-y)) rotate(45deg);
+            }
+        }
+
+        @keyframes buttonAppear {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         #renderCanvas {
             width: 100%;
             height: 100%;
         }
+
+        /* Styles pour le menu des paramètres */
+        .settings-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .settings-container {
+            background: linear-gradient(135deg, #ffd1dc 0%, #87ceeb 100%);
+            padding: 2rem;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 0 30px rgba(255, 105, 180, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .settings-container.active {
+            transform: scale(1);
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .settings-title {
+            font-size: 2em;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 105, 180, 0.5);
+            margin: 0;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 0.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .close-button:hover {
+            transform: rotate(90deg);
+        }
+
+        .settings-option {
+            margin-bottom: 1.5rem;
+        }
+
+        .settings-label {
+            display: block;
+            color: #fff;
+            font-size: 1.2em;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 5px rgba(255, 105, 180, 0.3);
+        }
+
+        .settings-select {
+            width: 100%;
+            padding: 0.8rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .settings-select:hover {
+            border-color: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .settings-select:focus {
+            outline: none;
+            border-color: #ff69b4;
+            box-shadow: 0 0 10px rgba(255, 105, 180, 0.3);
+        }
+
+        .settings-select option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .save-button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(45deg, #ff69b4, #87ceeb);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .save-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 105, 180, 0.4);
+        }
+
+        /* Menu Pause */
+        #pauseMenu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #pauseMenu.active {
+            opacity: 1;
+        }
+
+        .pause-content {
+            background: linear-gradient(135deg, rgba(255, 209, 220, 0.95) 0%, rgba(135, 206, 235, 0.95) 100%);
+            padding: 3rem;
+            border-radius: 25px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 
+                0 0 30px rgba(255, 105, 180, 0.3),
+                0 0 60px rgba(135, 206, 235, 0.2);
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        #pauseMenu.active .pause-content {
+            transform: scale(1);
+        }
+
+        .pause-title {
+            font-size: 3em;
+            color: #fff;
+            text-shadow: 
+                0 0 10px rgba(255, 105, 180, 0.5),
+                0 0 20px rgba(135, 206, 235, 0.5);
+            margin: 0 0 2rem 0;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .pause-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+
+        .pause-button {
+            width: 100%;
+            padding: 1.2rem;
+            border: none;
+            border-radius: 15px;
+            color: #fff;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(45deg, #ff69b4, #87ceeb);
+            box-shadow: 0 5px 15px rgba(255, 105, 180, 0.3);
+        }
+
+        .pause-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            transition: 0.5s;
+        }
+
+        .pause-button:hover::before {
+            left: 100%;
+        }
+
+        .pause-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .pause-button:active {
+            transform: translateY(1px);
+        }
+
+        /* Suppression des styles spécifiques pour chaque bouton */
+        .pause-button.resume,
+        .pause-button.settings,
+        .pause-button.quit {
+            background: linear-gradient(45deg, #ff69b4, #87ceeb);
+            box-shadow: 0 5px 15px rgba(255, 105, 180, 0.3);
+        }
     </style>
 </head>
 <body>
-    <canvas id="renderCanvas"></canvas>
+    <div id="welcomeScreen">
+        <div class="title-container">
+            <div class="title-glow"></div>
+            <h1 id="gameTitle">Cloud Bounce</h1>
+        </div>
+        <div class="buttons-container">
+            <button id="startButton">Commencer</button>
+            <button id="settingsButton">Paramètres</button>
+        </div>
+    </div>
+    <div id="gameScreen">
+        <canvas id="renderCanvas"></canvas>
+    </div>
+
+    <!-- Ajout du menu des paramètres -->
+    <div class="settings-overlay">
+        <div class="settings-container">
+            <div class="settings-header">
+                <h2 class="settings-title">Paramètres</h2>
+                <button class="close-button">&times;</button>
+            </div>
+            <div class="settings-option">
+                <label class="settings-label">Langue</label>
+                <select class="settings-select" id="languageSelect">
+                    <option value="fr">Français</option>
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                    <option value="de">Deutsch</option>
+                </select>
+            </div>
+            <div class="settings-option">
+                <label class="settings-label">Type de clavier</label>
+                <select class="settings-select" id="keyboardSelect">
+                    <option value="azerty">AZERTY</option>
+                    <option value="qwerty">QWERTY</option>
+                </select>
+            </div>
+            <button class="save-button">Enregistrer</button>
+        </div>
+    </div>
+
+    <!-- Menu Pause -->
+    <div id="pauseMenu">
+        <div class="pause-content">
+            <h2 class="pause-title">Pause</h2>
+            <div class="pause-buttons">
+                <button class="pause-button resume">Reprendre</button>
+                <button class="pause-button settings">Paramètres</button>
+                <button class="pause-button quit">Quitter</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
     <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
-    <script type="module" src="game.js"></script>
+    <script>
+        // Créer des nuages décoratifs plus élaborés
+        function createClouds() {
+            const welcomeScreen = document.getElementById('welcomeScreen');
+            const cloudCount = 15;
+            const heartCount = 10;
+
+            // Créer les nuages
+            for (let i = 0; i < cloudCount; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                
+                const size = Math.random() * 150 + 50;
+                cloud.style.width = size + 'px';
+                cloud.style.height = size * 0.6 + 'px';
+                
+                // Position verticale aléatoire
+                const startY = Math.random() * 100;
+                cloud.style.setProperty('--start-y', `${startY}%`);
+                cloud.style.top = `${startY}%`;
+                
+                // Vitesse aléatoire plus rapide
+                const duration = Math.random() * 20 + 10; // Durée réduite
+                cloud.style.animationDuration = `${duration}s`;
+                
+                welcomeScreen.appendChild(cloud);
+            }
+
+            // Créer les cœurs
+            for (let i = 0; i < heartCount; i++) {
+                const heart = document.createElement('div');
+                heart.className = 'heart';
+                
+                // Position verticale aléatoire
+                const startY = Math.random() * 100;
+                heart.style.setProperty('--start-y', `${startY}%`);
+                heart.style.top = `${startY}%`;
+                
+                heart.style.width = (Math.random() * 15 + 10) + 'px';
+                heart.style.height = heart.style.width;
+                
+                // Vitesse aléatoire plus rapide
+                const duration = Math.random() * 15 + 8; // Durée réduite
+                heart.style.animationDuration = `${duration}s`;
+                
+                welcomeScreen.appendChild(heart);
+            }
+        }
+
+        // Créer les éléments décoratifs immédiatement au chargement
+        window.addEventListener('load', createClouds);
+
+        // Système de gestion de l'état du jeu
+        class GameState {
+            constructor() {
+                this.isPaused = false;
+                this.gameLoop = null;
+                this.scene = null;
+            }
+
+            pause() {
+                this.isPaused = true;
+                if (this.scene) {
+                    this.scene.pause();
+                }
+                // Débloquer le pointeur de la souris
+                document.exitPointerLock();
+            }
+
+            resume() {
+                this.isPaused = false;
+                if (this.scene) {
+                    this.scene.resume();
+                }
+                // Rebloquer le pointeur de la souris
+                const canvas = document.getElementById("renderCanvas");
+                if (canvas) {
+                    canvas.requestPointerLock();
+                }
+            }
+
+            startGameLoop() {
+                const animate = () => {
+                    if (!this.isPaused) {
+                        // Mettre à jour la logique du jeu ici
+                        this.gameLoop = requestAnimationFrame(animate);
+                    }
+                };
+                this.gameLoop = requestAnimationFrame(animate);
+            }
+
+            setScene(scene) {
+                this.scene = scene;
+            }
+        }
+
+        // Créer une instance du gestionnaire d'état du jeu
+        const gameState = new GameState();
+        window.gameState = gameState;
+
+        // Gestion du menu pause
+        const pauseMenu = document.getElementById('pauseMenu');
+
+        // Gérer la touche P pour la pause
+        document.addEventListener('keydown', function(event) {
+            if (event.key.toLowerCase() === 'p') {
+                if (pauseMenu.style.display === 'none' || pauseMenu.style.display === '') {
+                    pauseMenu.style.display = 'flex';
+                    setTimeout(() => {
+                        pauseMenu.classList.add('active');
+                    }, 10);
+                } else {
+                    pauseMenu.classList.remove('active');
+                    setTimeout(() => {
+                        pauseMenu.style.display = 'none';
+                    }, 300);
+                }
+            }
+        });
+
+        // Gérer les boutons du menu pause
+        document.querySelector('.pause-button.resume').addEventListener('click', function() {
+            pauseMenu.classList.remove('active');
+            setTimeout(() => {
+                pauseMenu.style.display = 'none';
+            }, 300);
+        });
+
+        document.querySelector('.pause-button.settings').addEventListener('click', function() {
+            pauseMenu.classList.remove('active');
+            setTimeout(() => {
+                pauseMenu.style.display = 'none';
+            }, 300);
+            settingsOverlay.style.display = 'flex';
+            setTimeout(() => {
+                settingsOverlay.style.opacity = '1';
+                settingsContainer.classList.add('active');
+            }, 10);
+        });
+
+        document.querySelector('.pause-button.quit').addEventListener('click', function() {
+            if (confirm('Voulez-vous vraiment quitter le jeu ?')) {
+                window.location.reload();
+            }
+        });
+
+        // Gérer le démarrage du jeu
+        document.getElementById('startButton').addEventListener('click', function() {
+            const welcomeScreen = document.getElementById('welcomeScreen');
+            const gameScreen = document.getElementById('gameScreen');
+            
+            welcomeScreen.style.opacity = '0';
+            setTimeout(() => {
+                welcomeScreen.style.display = 'none';
+                gameScreen.style.display = 'block';
+                // Charger le jeu
+                const script = document.createElement('script');
+                script.type = 'module';
+                script.src = 'game.js';
+                document.body.appendChild(script);
+                // Démarrer la boucle de jeu
+                gameState.startGameLoop();
+            }, 500);
+        });
+
+        // Gérer le menu des paramètres
+        const settingsOverlay = document.querySelector('.settings-overlay');
+        const settingsContainer = document.querySelector('.settings-container');
+        const closeButton = document.querySelector('.close-button');
+        const saveButton = document.querySelector('.save-button');
+
+        // Ouvrir le menu des paramètres
+        document.getElementById('settingsButton').addEventListener('click', function() {
+            settingsOverlay.style.display = 'flex';
+            setTimeout(() => {
+                settingsOverlay.style.opacity = '1';
+                settingsContainer.classList.add('active');
+            }, 10);
+        });
+
+        // Fermer le menu des paramètres
+        function closeSettings() {
+            settingsOverlay.style.opacity = '0';
+            settingsContainer.classList.remove('active');
+            setTimeout(() => {
+                settingsOverlay.style.display = 'none';
+            }, 300);
+        }
+
+        closeButton.addEventListener('click', closeSettings);
+        settingsOverlay.addEventListener('click', function(e) {
+            if (e.target === settingsOverlay) {
+                closeSettings();
+            }
+        });
+
+        // Système de gestion des touches
+        class KeyboardManager {
+            constructor() {
+                this.keyboardType = 'azerty'; // Par défaut
+                this.keys = {
+                    azerty: {
+                        forward: 'z',
+                        backward: 's',
+                        left: 'q',
+                        right: 'd'
+                    },
+                    qwerty: {
+                        forward: 'w',
+                        backward: 's',
+                        left: 'a',
+                        right: 'd'
+                    }
+                };
+                this.currentKeys = this.keys.azerty;
+            }
+
+            setKeyboardType(type) {
+                this.keyboardType = type;
+                this.currentKeys = this.keys[type];
+                // Sauvegarder le choix dans le localStorage
+                localStorage.setItem('keyboardType', type);
+            }
+
+            getKey(key) {
+                return this.currentKeys[key];
+            }
+
+            // Vérifier si une touche est une touche de mouvement
+            isMovementKey(key) {
+                return Object.values(this.currentKeys).includes(key.toLowerCase());
+            }
+
+            // Obtenir la direction correspondant à une touche
+            getDirection(key) {
+                key = key.toLowerCase();
+                for (const [direction, keyValue] of Object.entries(this.currentKeys)) {
+                    if (keyValue === key) {
+                        return direction;
+                    }
+                }
+                return null;
+            }
+        }
+
+        // Créer une instance du gestionnaire de clavier
+        const keyboardManager = new KeyboardManager();
+
+        // Charger le type de clavier sauvegardé
+        const savedKeyboardType = localStorage.getItem('keyboardType');
+        if (savedKeyboardType) {
+            keyboardManager.setKeyboardType(savedKeyboardType);
+            document.getElementById('keyboardSelect').value = savedKeyboardType;
+        }
+
+        // Sauvegarder les paramètres
+        saveButton.addEventListener('click', function() {
+            const language = document.getElementById('languageSelect').value;
+            const keyboard = document.getElementById('keyboardSelect').value;
+            
+            // Mettre à jour le type de clavier
+            keyboardManager.setKeyboardType(keyboard);
+            
+            // Sauvegarder la langue (à implémenter)
+            localStorage.setItem('language', language);
+            
+            // Fermer le menu
+            closeSettings();
+        });
+
+        // Exporter le gestionnaire de clavier pour l'utiliser dans le jeu
+        window.keyboardManager = keyboardManager;
+    </script>
 </body>
 </html> 
