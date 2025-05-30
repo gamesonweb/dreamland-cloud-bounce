@@ -16,6 +16,9 @@ class Enemies {
         this.knockbackForce = 0.3; // 击退力度
         this.detectionRange = 15;    // 敌人检测玩家的范围
         this.chaseSpeed = 0.08;      // 追踪速度（比普通移动快）
+        this.targets = [];
+        this.spawnInterval = 5000; // Spawn une nouvelle cible toutes les 5 secondes
+        this.lastSpawnTime = 0;
         this.createEnemies();
     }
 
@@ -184,6 +187,26 @@ class Enemies {
             // 上下浮动动画
             enemy.position.y = 1 + Math.sin(enemy.metadata.movementTimer * 0.05) * 0.2;
         }
+
+        // Spawn de nouvelles cibles
+        if (currentTime - this.lastSpawnTime > this.spawnInterval) {
+            this.createTarget();
+            this.lastSpawnTime = currentTime;
+        }
+
+        // Mettre à jour les cibles existantes
+        this.targets = this.targets.filter(target => {
+            if (target.hit) {
+                // Animation de disparition
+                target.mesh.scaling.scaleInPlace(0.95);
+                if (target.mesh.scaling.x < 0.1) {
+                    target.mesh.dispose();
+                    target.heart.dispose();
+                    return false;
+                }
+            }
+            return true;
+        });
     }
 
     // 检查与子弹的碰撞
@@ -225,6 +248,23 @@ class Enemies {
                 }
             }
         }
+
+        bullets.forEach((bullet, bulletIndex) => {
+            this.targets.forEach(target => {
+                if (!target.hit && BABYLON.Vector3.Distance(bullet.mesh.position, target.mesh.position) < 1) {
+                    // Cible touchée
+                    target.hit = true;
+                    bullet.mesh.dispose();
+                    bullets.splice(bulletIndex, 1);
+                    
+                    // Effet de particules
+                    this.createHitEffect(target.mesh.position);
+                    
+                    // Ajouter des points
+                    this.game.gainExperience(50);
+                }
+            });
+        });
     }
 
     // 在敌人被销毁时清理血条
@@ -249,6 +289,91 @@ class Enemies {
             sphere.material.wireframe = true;
             sphere.material.alpha = 0.3;
         }
+    }
+
+    createTarget() {
+        // Créer une personne cible
+        const target = BABYLON.MeshBuilder.CreateBox("target", { height: 1.8, width: 0.6, depth: 0.6 }, this.scene);
+        
+        // Position aléatoire devant le joueur
+        const playerPos = this.game.player.mesh.position;
+        const randomAngle = Math.random() * Math.PI * 2;
+        const distance = 10 + Math.random() * 10; // Entre 10 et 20 unités devant
+        target.position = new BABYLON.Vector3(
+            playerPos.x + Math.cos(randomAngle) * distance,
+            1, // Hauteur du sol
+            playerPos.z + Math.sin(randomAngle) * distance
+        );
+
+        // Matériau de la cible
+        const targetMaterial = new BABYLON.StandardMaterial("targetMaterial", this.scene);
+        targetMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.6, 1);
+        target.material = targetMaterial;
+
+        // Ajouter un cœur au-dessus de la cible
+        const heart = BABYLON.MeshBuilder.CreateSphere("heart", { diameter: 0.3 }, this.scene);
+        heart.position = new BABYLON.Vector3(0, 1.2, 0);
+        heart.parent = target;
+        
+        const heartMaterial = new BABYLON.StandardMaterial("heartMaterial", this.scene);
+        heartMaterial.diffuseColor = new BABYLON.Color3(1, 0.2, 0.3);
+        heart.material = heartMaterial;
+
+        // Animation du cœur
+        this.scene.registerBeforeRender(() => {
+            if (!this.scene.game.gameState.isPaused) {
+                heart.scaling.y = 1 + Math.sin(this.scene.getEngine().getDeltaTime() * 0.005) * 0.1;
+            }
+        });
+
+        this.targets.push({
+            mesh: target,
+            heart: heart,
+            hit: false
+        });
+    }
+
+    createHitEffect(position) {
+        // Créer des particules de cœur
+        const particleSystem = new BABYLON.ParticleSystem("particles", 50, this.scene);
+        particleSystem.particleTexture = new BABYLON.Texture("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBNYWNpbnRvc2giIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6QUM2OEZDQTQ4RTU0MTFFMDg3Q0ZBRDg5RjY5QjM5MDQiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6QUM2OEZDQTU4RTU0MTFFMDg3Q0ZBRDg5RjY5QjM5MDQiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpBQzY4RkNBMjhFNTQxMUUwODdDRkFEODlGNjlCMzkwNCIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpBQzY4RkNBMzhFNTQxMUUwODdDRkFEODlGNjlCMzkwNCIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PgH//v38+/r5+Pf29fTz8vHw7+7t7Ovq6ejn5uXk4+Lh4N/e3dzb2tnY19bV1NPS0dDPzs3My8rJyMfGxcTDwsHAv769vLu6ubi3trW0s7KxsK+urayrqqmop6alpKOioaCfnp2cm5qZmJeWlZSTkpGQj46NjIuKiYiHhoWEg4KBgH9+fXx7enl4d3Z1dHNycXBvbm1sa2ppaGdmZWRjYmFgX15dXFtaWVhXVlVUU1JRUE9OTUxLSklIR0ZFRENCQUA/Pj08Ozo5ODc2NTQzMjEwLy4tLCsqKSgnJiUkIyIhIB8eHRwbGhkYFxYVFBMSERAPDg0MCwoJCAcGBQQDAgEAACH5BAAAAAAALAAAAAAgACAAAAIxjI+py+0Po5y02ouz3rz7D4biSJbmiabqyrbuC8fyTNf2jef6zvf+DwwKh8Si8YhMKicAADs=");
+        
+        particleSystem.emitter = position;
+        particleSystem.minEmitBox = new BABYLON.Vector3(-0.5, -0.5, -0.5);
+        particleSystem.maxEmitBox = new BABYLON.Vector3(0.5, 0.5, 0.5);
+        
+        particleSystem.color1 = new BABYLON.Color4(1, 0.2, 0.3, 1.0);
+        particleSystem.color2 = new BABYLON.Color4(1, 0.5, 0.5, 1.0);
+        particleSystem.colorDead = new BABYLON.Color4(0, 0, 0, 0.0);
+        
+        particleSystem.minSize = 0.1;
+        particleSystem.maxSize = 0.3;
+        
+        particleSystem.minLifeTime = 0.3;
+        particleSystem.maxLifeTime = 1.5;
+        
+        particleSystem.emitRate = 50;
+        
+        particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+        
+        particleSystem.gravity = new BABYLON.Vector3(0, 9.81, 0);
+        
+        particleSystem.direction1 = new BABYLON.Vector3(-2, 8, 2);
+        particleSystem.direction2 = new BABYLON.Vector3(2, 8, -2);
+        
+        particleSystem.minAngularSpeed = 0;
+        particleSystem.maxAngularSpeed = Math.PI;
+        
+        particleSystem.minEmitPower = 1;
+        particleSystem.maxEmitPower = 3;
+        particleSystem.updateSpeed = 0.01;
+        
+        particleSystem.start();
+        
+        // Arrêter les particules après 1 seconde
+        setTimeout(() => {
+            particleSystem.stop();
+        }, 1000);
     }
 }
 

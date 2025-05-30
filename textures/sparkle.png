@@ -1,0 +1,24 @@
+// Créer une texture de particule brillante
+const canvas = document.createElement('canvas');
+canvas.width = 64;
+canvas.height = 64;
+const ctx = canvas.getContext('2d');
+
+// Dessiner un cercle blanc avec un dégradé radial
+const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.5)');
+gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+ctx.fillStyle = gradient;
+ctx.beginPath();
+ctx.arc(32, 32, 32, 0, Math.PI * 2);
+ctx.fill();
+
+// Convertir le canvas en PNG
+const dataURL = canvas.toDataURL('image/png');
+const base64Data = dataURL.replace(/^data:image\/png;base64,/, '');
+
+// Écrire le fichier
+const fs = require('fs');
+fs.writeFileSync('textures/sparkle.png', base64Data, 'base64'); 

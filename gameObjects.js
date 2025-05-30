@@ -15,8 +15,20 @@ class GameObjects {
         this.collectibles = [];
         this.movingPlatforms = [];
         this.targets = [];
-        this.fragments = []; // 添加碎片数组
+        this.fragments = [];
         this.score = 0;
+        this.lastUpdateTime = 0;
+        this.updateInterval = 16; // ~60 FPS
+        this.cleanupInterval = 3000; // Nettoyage toutes les 3 secondes
+        this.lastCleanupTime = 0;
+        
+        // Limites d'objets pour optimiser les performances
+        this.maxCollectibles = 5; // Réduit de 10 à 5
+        this.maxPlatforms = 3;    // Réduit de 5 à 3
+        this.maxTargets = 3;      // Réduit de 5 à 3
+        this.maxFragments = 4;    // Réduit de 6 à 4
+        
+        // Initialisation des objets
         this.createCollectibles();
         this.createMovingPlatforms();
         this.createTargets();
@@ -24,21 +36,25 @@ class GameObjects {
 
     // 创建可收集物
     createCollectibles() {
-        // 创建一些随机位置的金币
-        for (let i = 0; i < 10; i++) {
+        // Nettoyer les collectibles existants
+        this.collectibles.forEach(collectible => collectible.dispose());
+        this.collectibles = [];
+
+        // Créer de nouveaux collectibles avec moins de segments
+        for (let i = 0; i < this.maxCollectibles; i++) {
             const x = Math.random() * 40 - 20;
             const y = Math.random() * 10 + 2;
             const z = Math.random() * 40 - 20;
             
             const collectible = BABYLON.MeshBuilder.CreateSphere("collectible" + i, {
                 diameter: 0.5,
-                segments: 16
+                segments: 4 // Réduit de 8 à 4 pour de meilleures performances
             }, this.scene);
             
             collectible.position = new BABYLON.Vector3(x, y, z);
             collectible.checkCollisions = true;
             
-            // 添加旋转动画
+            // Animation optimisée
             const rotationAnimation = new BABYLON.Animation(
                 "rotationAnimation",
                 "rotation.y",
@@ -47,24 +63,19 @@ class GameObjects {
                 BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
             );
             
-            const keyFrames = [];
-            keyFrames.push({
-                frame: 0,
-                value: 0
-            });
-            keyFrames.push({
-                frame: 30,
-                value: 2 * Math.PI
-            });
+            rotationAnimation.setKeys([
+                { frame: 0, value: 0 },
+                { frame: 30, value: 2 * Math.PI }
+            ]);
             
-            rotationAnimation.setKeys(keyFrames);
-            collectible.animations.push(rotationAnimation);
+            collectible.animations = [rotationAnimation];
             this.scene.beginAnimation(collectible, 0, 30, true);
             
-            // 添加材质
+            // Matériau optimisé
             const material = new BABYLON.StandardMaterial("collectibleMaterial", this.scene);
             material.diffuseColor = new BABYLON.Color3(1, 0.8, 0);
             material.emissiveColor = new BABYLON.Color3(0.5, 0.4, 0);
+            material.specularColor = new BABYLON.Color3(0, 0, 0);
             collectible.material = material;
             
             this.collectibles.push(collectible);
@@ -73,81 +84,71 @@ class GameObjects {
 
     // 创建移动平台
     createMovingPlatforms() {
-        // 创建一个测试用的移动平台
-        const platform = BABYLON.MeshBuilder.CreateBox("movingPlatform", {
-            width: 4,
-            height: 0.5,
-            depth: 4,
-            updatable: true
-        }, this.scene);
-        
-        platform.position = new BABYLON.Vector3(5, 3, 0);
-        
-        // 设置精确的碰撞盒
-        platform.computeWorldMatrix(true);
-        platform.refreshBoundingInfo();
-        
-        // 设置碰撞检测
-        platform.checkCollisions = true;
-        platform.isPickable = true;
-        
-        // 存储平台的实际尺寸
-        platform.metadata = {
-            width: 4,
-            height: 0.5,
-            depth: 4
-        };
-        
-        // 添加材质
-        const material = new BABYLON.StandardMaterial("platformMaterial", this.scene);
-        material.diffuseColor = new BABYLON.Color3(0.4, 0.6, 0.8);
-        platform.material = material;
-        
-        // 创建上下移动动画
-        const animation = new BABYLON.Animation(
-            "platformAnimation",
-            "position.y",
-            30,
-            BABYLON.Animation.ANIMATIONTYPE_FLOAT,
-            BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
-        );
-        
-        const keyFrames = [];
-        keyFrames.push({
-            frame: 0,
-            value: 3
-        });
-        keyFrames.push({
-            frame: 30,
-            value: 5
-        });
-        keyFrames.push({
-            frame: 60,
-            value: 3
-        });
-        
-        animation.setKeys(keyFrames);
-        platform.animations.push(animation);
-        this.scene.beginAnimation(platform, 0, 60, true);
-        
-        this.movingPlatforms.push(platform);
+        // Nettoyer les plateformes existantes
+        this.movingPlatforms.forEach(platform => platform.dispose());
+        this.movingPlatforms = [];
+
+        // Créer de nouvelles plateformes mobiles
+        for (let i = 0; i < this.maxPlatforms; i++) {
+            const platform = BABYLON.MeshBuilder.CreateBox("platform" + i, {
+                width: 3,
+                height: 0.5,
+                depth: 3
+            }, this.scene);
+            
+            platform.position = new BABYLON.Vector3(
+                Math.random() * 40 - 20,
+                2 + i * 2,
+                Math.random() * 40 - 20
+            );
+            
+            // Animation optimisée
+            const animation = new BABYLON.Animation(
+                "platformAnimation",
+                "position",
+                30,
+                BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
+                BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
+            );
+            
+            const startPos = platform.position.clone();
+            const endPos = startPos.add(new BABYLON.Vector3(0, 2, 0));
+            
+            animation.setKeys([
+                { frame: 0, value: startPos },
+                { frame: 30, value: endPos },
+                { frame: 60, value: startPos }
+            ]);
+            
+            platform.animations = [animation];
+            this.scene.beginAnimation(platform, 0, 60, true);
+            
+            // Matériau optimisé
+            const material = new BABYLON.StandardMaterial("platformMaterial", this.scene);
+            material.diffuseColor = new BABYLON.Color3(0.2, 0.6, 1);
+            material.emissiveColor = new BABYLON.Color3(0.1, 0.3, 0.5);
+            material.specularColor = new BABYLON.Color3(0, 0, 0);
+            platform.material = material;
+            
+            this.movingPlatforms.push(platform);
+        }
     }
 
     // 创建可击毁的目标
     createTargets() {
-        // 清除可能存在的旧目标
+        // Nettoyer les cibles existantes
         this.targets.forEach(target => target.dispose());
         this.targets = [];
         
-        // 创建一些随机位置的目标
-        for (let i = 0; i < 5; i++) {
+        // Créer de nouvelles cibles
+        for (let i = 0; i < this.maxTargets; i++) {
             const target = BABYLON.MeshBuilder.CreateBox("target" + i, {
                 width: 2,
                 height: 2,
                 depth: 0.5
             }, this.scene);
             
-            // 随机位置（确保不会生成在玩家附近）
+            // Position optimisée
             let position;
             let tooClose;
             do {
@@ -158,7 +159,6 @@ class GameObjects {
                     Math.random() * 40 - 20
                 );
                 
-                // 检查是否太靠近玩家
                 if (this.scene.getMeshByName("player")) {
                     const playerPosition = this.scene.getMeshByName("player").position;
                     const distance = BABYLON.Vector3.Distance(position, playerPosition);
@@ -169,39 +169,15 @@ class GameObjects {
             } while (tooClose);
             
             target.position = position;
-            
-            // 设置碰撞检测
             target.checkCollisions = true;
             target.isPickable = true;
             
-            // 添加材质
+            // Matériau optimisé
             const material = new BABYLON.StandardMaterial("targetMaterial", this.scene);
-            material.diffuseColor = new BABYLON.Color3(0.8, 0.2, 0.2); // 红色
+            material.diffuseColor = new BABYLON.Color3(0.8, 0.2, 0.2);
             material.emissiveColor = new BABYLON.Color3(0.4, 0.1, 0.1);
+            material.specularColor = new BABYLON.Color3(0, 0, 0);
             target.material = material;
-            
-            // 添加旋转动画
-            const rotationAnimation = new BABYLON.Animation(
-                "targetRotation",
-                "rotation.y",
-                30,
-                BABYLON.Animation.ANIMATIONTYPE_FLOAT,
-                BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
-            );
-            
-            const keyFrames = [];
-            keyFrames.push({
-                frame: 0,
-                value: 0
-            });
-            keyFrames.push({
-                frame: 30,
-                value: Math.PI * 2
-            });
-            
-            rotationAnimation.setKeys(keyFrames);
-            target.animations.push(rotationAnimation);
-            this.scene.beginAnimation(target, 0, 30, true);
             
             this.targets.push(target);
         }
@@ -209,44 +185,48 @@ class GameObjects {
 
     // 创建目标碎片
     createTargetFragments(position) {
-        const fragmentCount = 8; // 碎片数量
+        // Limiter le nombre de fragments
+        if (this.fragments.length >= this.maxFragments) {
+            // Supprimer les plus anciens fragments
+            const oldestFragment = this.fragments.shift();
+            if (oldestFragment && oldestFragment.mesh) {
+                oldestFragment.mesh.dispose();
+            }
+        }
         
-        for (let i = 0; i < fragmentCount; i++) {
-            // 创建碎片
+        for (let i = 0; i < 2; i++) { // Réduit de 6 à 2 fragments par cible
             const fragment = BABYLON.MeshBuilder.CreateBox("fragment" + i, {
                 width: 0.5,
                 height: 0.5,
                 depth: 0.5
             }, this.scene);
             
-            // 设置碎片位置（从目标中心向外扩散）
             fragment.position = position.clone();
             
-            // 设置碎片材质
+            // Matériau optimisé
             const material = new BABYLON.StandardMaterial("fragmentMaterial", this.scene);
             material.diffuseColor = new BABYLON.Color3(0.8, 0.2, 0.2);
             material.emissiveColor = new BABYLON.Color3(0.4, 0.1, 0.1);
+            material.specularColor = new BABYLON.Color3(0, 0, 0);
             fragment.material = material;
             
-            // 设置碎片初始速度（随机方向）
+            // Vitesse optimisée
             const velocity = new BABYLON.Vector3(
-                (Math.random() - 0.5) * 0.3, // 增加水平速度
-                Math.random() * 0.4 + 0.2,   // 增加垂直速度
-                (Math.random() - 0.5) * 0.3  // 增加水平速度
+                (Math.random() - 0.5) * 0.2,
+                Math.random() * 0.3 + 0.1,
+                (Math.random() - 0.5) * 0.2
             );
             
-            // 设置碎片旋转
             const rotation = new BABYLON.Vector3(
                 Math.random() * Math.PI * 2,
                 Math.random() * Math.PI * 2,
                 Math.random() * Math.PI * 2
             );
             
-            // 设置碎片旋转速度
             const rotationSpeed = new BABYLON.Vector3(
-                (Math.random() - 0.5) * 0.2, // 增加旋转速度
-                (Math.random() - 0.5) * 0.2,
-                (Math.random() - 0.5) * 0.2
+                (Math.random() - 0.5) * 0.1,
+                (Math.random() - 0.5) * 0.1,
+                (Math.random() - 0.5) * 0.1
             );
             
             this.fragments.push({
@@ -254,34 +234,8 @@ class GameObjects {
                 velocity: velocity,
                 rotation: rotation,
                 rotationSpeed: rotationSpeed,
-                lifetime: 120 // 增加生命周期
+                lifetime: 30 // Réduit de 60 à 30 frames
             });
-        }
-    }
-
-    // 更新碎片
-    updateFragments() {
-        for (let i = this.fragments.length - 1; i >= 0; i--) {
-            const fragment = this.fragments[i];
-            
-            // 更新位置
-            fragment.mesh.position.addInPlace(fragment.velocity);
-            
-            // 更新旋转
-            fragment.rotation.addInPlace(fragment.rotationSpeed);
-            fragment.mesh.rotation = fragment.rotation;
-            
-            // 应用重力
-            fragment.velocity.y -= 0.02; // 增加重力
-            
-            // 减少生命周期
-            fragment.lifetime--;
-            
-            // 如果碎片生命周期结束或碰到地面，移除碎片
-            if (fragment.lifetime <= 0 || fragment.mesh.position.y <= 0.5) {
-                fragment.mesh.dispose();
-                this.fragments.splice(i, 1);
-            }
         }
     }
 
@@ -301,19 +255,14 @@ class GameObjects {
                 );
 
                 if (distance < 1.5) {
-                    // 创建破碎效果
-                    this.createDestroyEffect(target.position);
-                    
-                    // 移除目标和子弹
+                    this.createTargetFragments(target.position);
                     target.dispose();
                     this.targets.splice(j, 1);
                     bullet.mesh.dispose();
                     bullets.splice(i, 1);
                     
-                    // 增加分数和经验
                     this.score += 20;
-                    this.game.gainExperience(30);  // 击碎目标获得30经验
-                    console.log(`Score: ${this.score}, Experience gained: 30`);
+                    this.game.gainExperience(30);
                     break;
                 }
             }
@@ -322,7 +271,23 @@ class GameObjects {
 
     // 检查碰撞
     checkCollisions(playerPosition, playerVelocity) {
-        // 检查与金币的碰撞
+        const currentTime = Date.now();
+        
+        // Optimisation : mise à jour limitée
+        if (currentTime - this.lastUpdateTime < this.updateInterval) {
+            return this.isOnPlatform;
+        }
+        this.lastUpdateTime = currentTime;
+
+        // Nettoyage périodique
+        if (currentTime - this.lastCleanupTime > this.cleanupInterval) {
+            this.cleanup();
+            this.lastCleanupTime = currentTime;
+        }
+
+        let isOnPlatform = false;
+
+        // Vérification des collisions avec les collectibles
         for (let i = this.collectibles.length - 1; i >= 0; i--) {
             const collectible = this.collectibles[i];
             const distance = BABYLON.Vector3.Distance(playerPosition, collectible.position);
@@ -332,12 +297,10 @@ class GameObjects {
                 this.collectibles.splice(i, 1);
                 this.score += 10;
                 this.game.gainExperience(10);
-                console.log("Collected coin! Score:", this.score);
-                this.createCollectEffect(collectible.position);
             }
         }
 
-        // 检查目标碰撞
+        // Vérification des collisions avec les cibles
         for (let i = this.targets.length - 1; i >= 0; i--) {
             const target = this.targets[i];
             const distance = BABYLON.Vector3.Distance(playerPosition, target.position);
@@ -347,153 +310,71 @@ class GameObjects {
                 this.targets.splice(i, 1);
                 this.score += 20;
                 this.game.gainExperience(20);
-                console.log("Target destroyed! Score:", this.score);
-                this.createDestroyEffect(target.position);
+                this.createTargetFragments(target.position);
             }
         }
 
-        // 检查地面碰撞
-        const playerBottom = playerPosition.y - 0.5;
-        if (playerBottom <= 0.1) {
+        // Vérification des collisions avec le sol
+        if (playerPosition.y <= 0.5) {
             playerPosition.y = 0.5;
-            return true;
+            isOnPlatform = true;
         }
 
-        // 检查与所有平台的碰撞
+        // Vérification des collisions avec les plateformes
         const allPlatforms = [
-            ...this.movingPlatforms, 
+            ...this.movingPlatforms,
             ...this.scene.meshes.filter(mesh => 
                 mesh.metadata?.isGround ||
-                mesh.id.startsWith("platform_") || 
-                mesh.id.startsWith("bridge_") || 
+                mesh.id.startsWith("platform_") ||
+                mesh.id.startsWith("bridge_") ||
                 mesh.id.startsWith("ramp_") ||
                 mesh.id.startsWith("cloud_") ||
-                mesh.id.startsWith("obstacle_") ||  // 添加对新平台的检测
-                mesh.id === "ground"  // 添加对基础地面的检测
+                mesh.id.startsWith("obstacle_") ||
+                mesh.id === "ground"
             )
         ];
 
-        console.log("Found platforms:", allPlatforms.map(p => p.id));
-
         for (const platform of allPlatforms) {
-            if (!platform.metadata) {
-                console.warn("Platform missing metadata:", platform.id);
-                continue;
+            if (this.checkPlatformCollision(playerPosition, platform)) {
+                isOnPlatform = true;
+                break;
             }
+        }
 
-            const platformPos = platform.position;
-            const width = platform.metadata.width;
-            const height = platform.metadata.height;
-            const depth = platform.metadata.depth;
-            const isGround = platform.metadata.isGround;
+        return isOnPlatform;
+    }
 
-            // 玩家碰撞体积参数
-            const playerHalfWidth = 0.4;
-            const playerHeight = 1.0;
-            const playerBottom = playerPosition.y - playerHeight/2;
-            const playerTop = playerPosition.y + playerHeight/2;
-
-            // 计算平台表面高度
-            let surfaceY = isGround ? 0 : platformPos.y + height/2;
+    checkPlatformCollision(playerPosition, platform) {
+        const platformBounds = platform.getBoundingInfo().boundingBox;
+        const playerBottom = playerPosition.y - 0.5;
+        
+        if (playerBottom <= platformBounds.maximumWorld.y &&
+            playerBottom >= platformBounds.minimumWorld.y &&
+            playerPosition.x >= platformBounds.minimumWorld.x &&
+            playerPosition.x <= platformBounds.maximumWorld.x &&
+            playerPosition.z >= platformBounds.minimumWorld.z &&
+            playerPosition.z <= platformBounds.maximumWorld.z) {
             
-            // 计算平台边界（考虑旋转）
-            let minX, maxX, minZ, maxZ;
-            if (platform.rotation && platform.rotation.y !== 0) {
-                // 对于旋转的平台，使用更大的碰撞盒
-                const maxDim = Math.max(width, depth);
-                minX = platformPos.x - maxDim/2;
-                maxX = platformPos.x + maxDim/2;
-                minZ = platformPos.z - maxDim/2;
-                maxZ = platformPos.z + maxDim/2;
-            } else {
-                minX = platformPos.x - width/2;
-                maxX = platformPos.x + width/2;
-                minZ = platformPos.z - depth/2;
-                maxZ = platformPos.z + depth/2;
-            }
-
-            // 检查水平碰撞
-            const isOverlappingHorizontally = 
-                playerPosition.x + playerHalfWidth > minX && 
-                playerPosition.x - playerHalfWidth < maxX &&
-                playerPosition.z + playerHalfWidth > minZ && 
-                playerPosition.z - playerHalfWidth < maxZ;
-
-            // 检查垂直碰撞
-            const isOnSurface = 
-                playerBottom <= surfaceY + 0.1 && // 增加一点向上的容差
-                playerBottom >= surfaceY - 0.1 && // 增加一点向下的容差
-                playerVelocity.y <= 0;            // 确保玩家在下落
-
-            // 在检测到与平台碰撞时
-            if (isOverlappingHorizontally && isOnSurface) {
-                playerPosition.y = surfaceY + playerHeight/2;
-                return true;
-            }
+            playerPosition.y = platformBounds.maximumWorld.y + 0.5;
+            return true;
         }
         
         return false;
     }
 
-    // 添加销毁效果
-    createDestroyEffect(position) {
-        const particleSystem = new BABYLON.ParticleSystem("particles", 2000, this.scene);
-        particleSystem.particleTexture = new BABYLON.Texture("textures/flare.png", this.scene);
-        particleSystem.emitter = position;
-        particleSystem.minEmitBox = new BABYLON.Vector3(-0.5, -0.5, -0.5);
-        particleSystem.maxEmitBox = new BABYLON.Vector3(0.5, 0.5, 0.5);
-        particleSystem.color1 = new BABYLON.Color4(1, 0.5, 0, 1.0);
-        particleSystem.color2 = new BABYLON.Color4(1, 0.5, 0, 1.0);
-        particleSystem.colorDead = new BABYLON.Color4(0, 0, 0, 0.0);
-        particleSystem.minSize = 0.1;
-        particleSystem.maxSize = 0.5;
-        particleSystem.minLifeTime = 0.3;
-        particleSystem.maxLifeTime = 1.5;
-        particleSystem.emitRate = 300;
-        particleSystem.gravity = new BABYLON.Vector3(0, -9.81, 0);
-        particleSystem.direction1 = new BABYLON.Vector3(-1, 1, -1);
-        particleSystem.direction2 = new BABYLON.Vector3(1, 1, 1);
-        particleSystem.minEmitPower = 1;
-        particleSystem.maxEmitPower = 3;
-        particleSystem.start();
-
-        // 一段时间后停止并销毁粒子系统
-        setTimeout(() => {
-            particleSystem.stop();
-            setTimeout(() => particleSystem.dispose(), 2000);
-        }, 300);
-    }
-
-    // 添加收集效果
-    createCollectEffect(position) {
-        const particleSystem = new BABYLON.ParticleSystem("collectParticles", 50, this.scene);
-        particleSystem.particleTexture = new BABYLON.Texture("textures/sparkle.png", this.scene);
-        particleSystem.emitter = position;
-        particleSystem.minEmitBox = new BABYLON.Vector3(-0.2, -0.2, -0.2);
-        particleSystem.maxEmitBox = new BABYLON.Vector3(0.2, 0.2, 0.2);
-        particleSystem.color1 = new BABYLON.Color4(1, 0.8, 0, 1.0);
-        particleSystem.color2 = new BABYLON.Color4(1, 0.5, 0, 1.0);
-        particleSystem.colorDead = new BABYLON.Color4(0, 0, 0, 0.0);
-        particleSystem.minSize = 0.1;
-        particleSystem.maxSize = 0.3;
-        particleSystem.minLifeTime = 0.2;
-        particleSystem.maxLifeTime = 0.8;
-        particleSystem.emitRate = 100;
-        particleSystem.gravity = new BABYLON.Vector3(0, 5, 0);
-        particleSystem.direction1 = new BABYLON.Vector3(-1, 8, -1);
-        particleSystem.direction2 = new BABYLON.Vector3(1, 8, 1);
-        particleSystem.minEmitPower = 1;
-        particleSystem.maxEmitPower = 2;
-        particleSystem.start();
-
-        setTimeout(() => {
-            particleSystem.stop();
-            setTimeout(() => particleSystem.dispose(), 1000);
-        }, 200);
-    }
-
     update(bullets) {
-        // 检查金币碰撞
+        const currentTime = Date.now();
+        
+        // Optimisation : mise à jour limitée
+        if (currentTime - this.lastUpdateTime < this.updateInterval) {
+            return;
+        }
+        this.lastUpdateTime = currentTime;
+
+        // Mise à jour des fragments
+        this.updateFragments();
+
+        // Vérification des collisions avec les collectibles
         for (let i = this.collectibles.length - 1; i >= 0; i--) {
             const collectible = this.collectibles[i];
             const distance = BABYLON.Vector3.Distance(
@@ -501,38 +382,67 @@ class GameObjects {
                 collectible.position
             );
 
-            // 如果玩家靠近金币
             if (distance < 1.5) {
-                // 播放收集效果
-                this.createCollectEffect(collectible.position.clone());
-                
-                // 移除金币
                 collectible.dispose();
                 this.collectibles.splice(i, 1);
-                
-                // 增加分数和经验
                 this.score += 10;
-                this.game.gainExperience(10);  // 收集金币获得10经验
-                console.log(`Score: ${this.score}, Experience gained: 10`);
+                this.game.gainExperience(10);
             }
         }
 
-        // 检查子弹与目标的碰撞
+        // Vérification des collisions avec les balles
         this.checkBulletCollisions(bullets);
 
-        // 更新碎片
-        this.updateFragments();
-
-        // 更新移动平台
-        for (const platform of this.movingPlatforms) {
-            // 平台移动逻辑保持不变
-        }
-
-        // 检查是否需要刷新目标
+        // Recréation des cibles si nécessaire
         if (this.targets.length === 0) {
-            console.log("所有目标已被消灭！创建新的目标...");
             this.createTargets();
         }
+    }
+
+    updateFragments() {
+        for (let i = this.fragments.length - 1; i >= 0; i--) {
+            const fragment = this.fragments[i];
+            fragment.lifetime--;
+            
+            if (fragment.lifetime <= 0) {
+                fragment.mesh.dispose();
+                this.fragments.splice(i, 1);
+                continue;
+            }
+            
+            // Mise à jour de la position
+            fragment.mesh.position.addInPlace(fragment.velocity);
+            
+            // Mise à jour de la rotation
+            fragment.mesh.rotation.addInPlace(fragment.rotationSpeed);
+            
+            // Application de la gravité
+            fragment.velocity.y -= 0.01;
+        }
+    }
+
+    cleanup() {
+        // Nettoyage des fragments
+        this.fragments = this.fragments.filter(fragment => {
+            if (fragment.lifetime <= 0) {
+                fragment.mesh.dispose();
+                return false;
+            }
+            return true;
+        });
+
+        // Nettoyage des matériaux non utilisés
+        this.scene.materials.forEach(material => {
+            let isUsed = false;
+            this.scene.meshes.forEach(mesh => {
+                if (mesh.material === material) {
+                    isUsed = true;
+                }
+            });
+            if (!isUsed) {
+                material.dispose();
+            }
+        });
     }
 }
 

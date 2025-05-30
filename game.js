@@ -15,24 +15,73 @@ import WeaponUI from './weaponUI.js';
 
 class Game {
     constructor() {
-        // 创建画布
+        // Initialisation du canvas et du moteur
         this.canvas = document.getElementById("renderCanvas");
-        this.engine = new BABYLON.Engine(this.canvas, true);
-        this.scene = new BABYLON.Scene(this.engine);
+        this.engine = new BABYLON.Engine(this.canvas, true, {
+            preserveDrawingBuffer: true,
+            stencil: true,
+            powerPreference: "high-performance",
+            antialias: false, // Désactive l'antialiasing pour de meilleures performances
+            depth: true,
+            alpha: false
+        });
         
-        // 在创建其他对象之前保存game引用
+        // Création de la scène avec optimisations
+        this.scene = new BABYLON.Scene(this.engine);
+        this.scene.clearColor = new BABYLON.Color4(0.5, 0.8, 0.9, 1);
+        
+        // Optimisations de performance avancées
+        this.scene.skipPointerMovePicking = true;
+        this.scene.skipFrustumClipping = true;
+        this.scene.autoClear = true;
+        this.scene.autoClearDepthAndStencil = true;
+        this.scene.blockMaterialDirtyMechanism = true;
+        this.scene.useRightHandedSystem = true;
+        this.scene.autoClear = true;
+        this.scene.autoClearDepthAndStencil = true;
+        
+        // Optimisation des ombres
+        this.scene.shadowsEnabled = false;
+        
+        // Référence au jeu
         this.scene.game = this;
         
-        // 创建地形
+        // Initialisation des composants
+        this.initializeComponents();
+        
+        // Configuration de la scène
+        this.setupScene();
+        
+        // Création de l'UI
+        this.createUI();
+        
+        // Gestion des événements
+        this.setupEventListeners();
+        
+        // Démarrage de la boucle de jeu
+        this.startGameLoop();
+        
+        // Gestion du redimensionnement optimisée
+        let resizeTimeout;
+        window.addEventListener("resize", () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                this.engine.resize();
+            }, 250);
+        });
+    }
+
+    initializeComponents() {
+        // Création du terrain
         this.terrain = new Terrain(this.scene);
         
-        // 创建游戏对象
+        // Création des objets du jeu
         this.gameObjects = new GameObjects(this.scene, this);
         
-        // 创建玩家
+        // Création du joueur
         this.player = new Player(this.scene, new BABYLON.Vector3(0, 2, 0));
         
-        // 初始化玩家状态
+        // Initialisation des statistiques du joueur
         this.playerStats = {
             health: 100,
             maxHealth: 100,
@@ -42,27 +91,62 @@ class Game {
             healthIncreasePerLevel: 20
         };
         
-        // 创建敌人系统
+        // Création du système d'ennemis
         this.enemies = new Enemies(this.scene, this);
         
-        // 创建武器UI
+        // Création de l'UI des armes
         this.weaponUI = new WeaponUI(this.scene, this);
         
-        // 获取游戏状态管理器
+        // Récupération du gestionnaire d'état du jeu
         this.gameState = window.gameState;
         this.gameState.setScene(this.scene);
         
-        // 初始化暂停菜单
+        // Initialisation du menu pause
         this.pauseMenu = document.getElementById('pauseMenu');
-        
-        // 添加键盘事件监听
+    }
+
+    setupScene() {
+        // Configuration de l'éclairage optimisé
+        const ambientLight = new BABYLON.HemisphericLight(
+            "ambientLight",
+            new BABYLON.Vector3(0, 1, 0),
+            this.scene
+        );
+        ambientLight.intensity = 0.7;
+        ambientLight.specular = new BABYLON.Color3(0, 0, 0);
+        ambientLight.groundColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+        ambientLight.diffuse = new BABYLON.Color3(0.7, 0.7, 0.7);
+
+        const directionalLight = new BABYLON.DirectionalLight(
+            "directionalLight",
+            new BABYLON.Vector3(0, -1, 0),
+            this.scene
+        );
+        directionalLight.intensity = 0.5;
+        directionalLight.specular = new BABYLON.Color3(0, 0, 0);
+        directionalLight.diffuse = new BABYLON.Color3(0.5, 0.5, 0.5);
+
+        // Configuration du brouillard optimisé
+        this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
+        this.scene.fogColor = new BABYLON.Color3(0.9, 0.9, 0.9);
+        this.scene.fogDensity = 0.01;
+
+        // Optimisations supplémentaires
+        this.scene.autoClear = true;
+        this.scene.autoClearDepthAndStencil = true;
+        this.scene.skipPointerMovePicking = true;
+        this.scene.skipFrustumClipping = true;
+    }
+
+    setupEventListeners() {
+        // Gestion de la pause
         window.addEventListener('keydown', (event) => {
             if (event.key.toLowerCase() === 'p') {
                 this.togglePause();
             }
         });
 
-        // 添加按钮事件监听
+        // Gestion des boutons du menu pause
         document.querySelector('.pause-button.resume').addEventListener('click', () => {
             this.togglePause();
         });
@@ -83,104 +167,75 @@ class Game {
                 window.location.reload();
             }
         });
-        
-        // 设置场景
-        this.setupScene();
-        
-        // 创建UI
-        this.createUI();
-        
-        // 创建经验条UI
-        this.createExpUI();
-        
-        // 开始渲染循环
-        this.startGameLoop();
-        
-        // 处理窗口大小变化
-        window.addEventListener("resize", () => {
-            this.engine.resize();
-        });
     }
 
     togglePause() {
         if (!this.gameState.isPaused) {
-            // Pause the game
             this.gameState.pause();
-            // Show the pause menu
             this.pauseMenu.style.display = 'flex';
             setTimeout(() => {
                 this.pauseMenu.classList.add('active');
             }, 10);
-            // Unlock the mouse
             document.exitPointerLock();
         } else {
-            // Resume the game
             this.gameState.resume();
-            // Hide the pause menu
             this.pauseMenu.classList.remove('active');
             setTimeout(() => {
                 this.pauseMenu.style.display = 'none';
             }, 300);
-            // Lock the mouse
             this.canvas.requestPointerLock();
         }
     }
 
     startGameLoop() {
+        let lastTime = performance.now();
+        const targetFPS = 60;
+        const frameTime = 1000 / targetFPS;
+        let accumulator = 0;
+
         this.engine.runRenderLoop(() => {
-            if (!this.gameState.isPaused) {
-                this.player.update();
-                this.update();
+            const currentTime = performance.now();
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+
+            // Accumulation du temps pour des mises à jour fixes
+            accumulator += deltaTime;
+
+            // Mise à jour à intervalles fixes
+            while (accumulator >= frameTime) {
+                if (!this.gameState.isPaused) {
+                    this.update(frameTime);
+                }
+                accumulator -= frameTime;
             }
+
+            // Rendu à chaque frame
             this.scene.render();
         });
     }
 
-    setupScene() {
-        // 设置环境光
-        const ambientLight = new BABYLON.HemisphericLight(
-            "ambientLight",
-            new BABYLON.Vector3(0, 1, 0),
-            this.scene
-        );
-        ambientLight.intensity = 0.7;
+    update(deltaTime) {
+        // Mise à jour du joueur
+        this.player.update();
 
-        // 设置平行光（模拟太阳光）
-        const directionalLight = new BABYLON.DirectionalLight(
-            "directionalLight",
-            new BABYLON.Vector3(0, -1, 0),
-            this.scene
-        );
-        directionalLight.intensity = 0.5;
-
-        // 设置雾效果
-        this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-        this.scene.fogColor = new BABYLON.Color3(0.9, 0.9, 0.9);
-        this.scene.fogDensity = 0.01;
-    }
-
-    update() {
-        if (this.gameState.isPaused) return;
-
-        // 检查碰撞
+        // Vérification des collisions
         const isOnPlatform = this.gameObjects.checkCollisions(
             this.player.mesh.position,
             this.player.playerVelocity
         );
-        
-        // 更新玩家平台状态
         this.player.setOnPlatform(isOnPlatform);
-        
-        // 更新游戏对象，传递子弹信息
+
+        // Mise à jour des objets du jeu
         this.gameObjects.update(this.player.bullets);
-        
-        // 更新敌人（敌人的攻击和碰撞检测现在在enemies.update中处理）
+
+        // Mise à jour des ennemis
         this.enemies.update();
-        
-        // 检查子弹碰撞
-        this.enemies.checkBulletCollisions(this.player.bullets);
-        
-        // 检查是否到达终点
+
+        // Vérification de la victoire
+        this.checkVictory();
+    }
+
+    checkVictory() {
         const finishGate = this.scene.getMeshByName("finishGate");
         if (finishGate) {
             const distance = BABYLON.Vector3.Distance(
@@ -194,20 +249,116 @@ class Game {
         }
     }
 
-    // 导入新的地形模型
-    async loadNewTerrain(modelUrl) {
-        // 清除现有地形
-        this.scene.meshes.forEach(mesh => {
-            if (mesh !== this.player.mesh && mesh !== this.player.camera) {
-                mesh.dispose();
-            }
-        });
+    showDamageNumber(damage) {
+        const damageText = new BABYLON.GUI.TextBlock();
+        damageText.text = `-${damage}`;
+        damageText.color = "red";
+        damageText.fontSize = 24;
+        damageText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        damageText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        damageText.top = "-100px";
+        this.advancedTexture.addControl(damageText);
 
-        // 加载新地形
-        await this.terrain.importTerrainModel(modelUrl);
+        const animation = new BABYLON.Animation(
+            "damageAnim",
+            "top",
+            60,
+            BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+        );
+
+        animation.setKeys([
+            { frame: 0, value: -100 },
+            { frame: 60, value: -150 }
+        ]);
+
+        damageText.animations = [animation];
+
+        this.scene.beginAnimation(damageText, 0, 60, false, 1, () => {
+            setTimeout(() => {
+                this.advancedTexture.removeControl(damageText);
+            }, 500);
+        });
+    }
+
+    takeDamage(damage) {
+        if (damage <= 0) return;
+
+        const oldHealth = this.playerStats.health;
+        this.playerStats.health = Math.max(0, oldHealth - damage);
         
-        // 重新创建游戏对象
-        this.gameObjects = new GameObjects(this.scene, this);
+        this.showDamageNumber(damage);
+        this.updatePlayerStats();
+        
+        if (this.playerStats.health <= 0) {
+            this.gameOver();
+        }
+    }
+
+    gainExperience(amount) {
+        this.playerStats.exp += amount;
+        
+        while (this.playerStats.exp >= this.playerStats.expToNextLevel) {
+            this.playerStats.level++;
+            this.playerStats.exp -= this.playerStats.expToNextLevel;
+            this.playerStats.maxHealth += this.playerStats.healthIncreasePerLevel;
+            this.playerStats.health = this.playerStats.maxHealth;
+            this.playerStats.expToNextLevel = Math.floor(this.playerStats.expToNextLevel * 1.2);
+            
+            this.showLevelUpEffect();
+            this.updateHealthBar();
+        }
+        
+        this.updateExpBar();
+        this.showExpGain(amount);
+    }
+
+    gameOver() {
+        const gameOverText = new BABYLON.GUI.TextBlock();
+        gameOverText.text = "GAME OVER";
+        gameOverText.color = "red";
+        gameOverText.fontSize = 72;
+        gameOverText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        gameOverText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        this.advancedTexture.addControl(gameOverText);
+        
+        const restartButton = BABYLON.GUI.Button.CreateSimpleButton("restart", "Restart");
+        restartButton.width = "150px";
+        restartButton.height = "40px";
+        restartButton.color = "white";
+        restartButton.cornerRadius = 20;
+        restartButton.background = "green";
+        restartButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        restartButton.top = "50px";
+        this.advancedTexture.addControl(restartButton);
+        
+        restartButton.onPointerClickObservable.add(() => {
+            window.location.reload();
+        });
+    }
+
+    showVictory() {
+        const victoryText = new BABYLON.GUI.TextBlock();
+        victoryText.text = "Victory!";
+        victoryText.color = "gold";
+        victoryText.fontSize = 72;
+        victoryText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        victoryText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        this.advancedTexture.addControl(victoryText);
+        
+        const restartButton = BABYLON.GUI.Button.CreateSimpleButton("restart", "Play Again");
+        restartButton.width = "150px";
+        restartButton.height = "40px";
+        restartButton.color = "white";
+        restartButton.cornerRadius = 20;
+        restartButton.background = "green";
+        restartButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        restartButton.top = "50px";
+        this.advancedTexture.addControl(restartButton);
+        
+        restartButton.onPointerClickObservable.add(() => {
+            window.location.reload();
+        });
     }
 
     createUI() {
@@ -335,42 +486,6 @@ class Game {
         }, 2000);
     }
     
-    // 显示伤害数字
-    showDamageNumber(damage) {
-        const damageText = new BABYLON.GUI.TextBlock();
-        damageText.text = `-${damage}`;
-        damageText.color = "red";
-        damageText.fontSize = 24;
-        damageText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-        damageText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
-        damageText.top = "-100px";  // 让数字从头顶上方开始
-        this.advancedTexture.addControl(damageText);
-
-        // 创建上升和淡出动画
-        const animation = new BABYLON.Animation(
-            "damageAnim",
-            "top",
-            60,
-            BABYLON.Animation.ANIMATIONTYPE_FLOAT,
-            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
-        );
-
-        const keys = [];
-        keys.push({ frame: 0, value: -100 });
-        keys.push({ frame: 60, value: -150 });
-        animation.setKeys(keys);
-
-        damageText.animations = [];
-        damageText.animations.push(animation);
-
-        // 开始动画并在结束后移除文本
-        this.scene.beginAnimation(damageText, 0, 60, false, 1, () => {
-            setTimeout(() => {
-                this.advancedTexture.removeControl(damageText);
-            }, 500);
-        });
-    }
-
     // 显示经验获得数字
     showExpGain(exp) {
         const expText = new BABYLON.GUI.TextBlock();
@@ -402,61 +517,6 @@ class Game {
         this.scene.beginAnimation(expText, 0, 30, false, 1, () => {
             this.advancedTexture.removeControl(expText);
         });
-    }
-    
-    takeDamage(damage) {
-        // 确保伤害是正数
-        if (damage <= 0) return;
-
-        // 计算新的血量
-        const oldHealth = this.playerStats.health;
-        this.playerStats.health = Math.max(0, oldHealth - damage);
-        
-        console.log("Player took damage:", damage, "Health:", this.playerStats.health);
-        
-        // 显示伤害数字
-        this.showDamageNumber(damage);
-        
-        // 更新UI
-        this.updatePlayerStats();
-        
-        // 检查是否死亡
-        if (this.playerStats.health <= 0) {
-            this.gameOver();
-        }
-    }
-    
-    gainExperience(amount) {
-        this.playerStats.exp += amount;
-        
-        // 检查是否升级
-        while (this.playerStats.exp >= this.playerStats.expToNextLevel) {
-            // 升级
-            this.playerStats.level++;
-            this.playerStats.exp -= this.playerStats.expToNextLevel;
-            
-            // 增加最大血量和恢复满血
-            this.playerStats.maxHealth += this.playerStats.healthIncreasePerLevel;
-            this.playerStats.health = this.playerStats.maxHealth;
-            
-            // 增加下一级所需经验
-            this.playerStats.expToNextLevel = Math.floor(this.playerStats.expToNextLevel * 1.2);
-            
-            // 显示升级效果
-            this.showLevelUpEffect();
-            
-            // 更新血条
-            this.updateHealthBar();
-            
-            console.log(`Level up! Now level ${this.playerStats.level}`);
-            console.log(`Max Health increased to ${this.playerStats.maxHealth}`);
-        }
-        
-        // 更新经验条
-        this.updateExpBar();
-        
-        // 显示获得经验的飘字效果
-        this.showExpGain(amount);
     }
     
     updateExpBar() {
@@ -520,85 +580,6 @@ class Game {
             }, 200);
         }
     }
-    
-    gameOver() {
-        // 游戏结束逻辑
-        const gameOverText = new BABYLON.GUI.TextBlock();
-        gameOverText.text = "GAME OVER";
-        gameOverText.color = "red";
-        gameOverText.fontSize = 72;
-        gameOverText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-        gameOverText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
-        this.advancedTexture.addControl(gameOverText);
-        
-        // 重新开始按钮
-        const restartButton = BABYLON.GUI.Button.CreateSimpleButton("restart", "Restart");
-        restartButton.width = "150px";
-        restartButton.height = "40px";
-        restartButton.color = "white";
-        restartButton.cornerRadius = 20;
-        restartButton.background = "green";
-        restartButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
-        restartButton.top = "50px";
-        this.advancedTexture.addControl(restartButton);
-        
-        restartButton.onPointerClickObservable.add(() => {
-            window.location.reload();
-        });
-    }
-
-    showVictory() {
-        // 创建胜利UI
-        const victoryText = new BABYLON.GUI.TextBlock();
-        victoryText.text = "Victory!";
-        victoryText.color = "gold";
-        victoryText.fontSize = 72;
-        victoryText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-        victoryText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
-        this.advancedTexture.addControl(victoryText);
-        
-        // 重新开始按钮
-        const restartButton = BABYLON.GUI.Button.CreateSimpleButton("restart", "Play Again");
-        restartButton.width = "150px";
-        restartButton.height = "40px";
-        restartButton.color = "white";
-        restartButton.cornerRadius = 20;
-        restartButton.background = "green";
-        restartButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
-        restartButton.top = "50px";
-        this.advancedTexture.addControl(restartButton);
-        
-        restartButton.onPointerClickObservable.add(() => {
-            window.location.reload();
-        });
-    }
-
-    createExpUI() {
-        // 创建经验条容器
-        const expBarContainer = new BABYLON.GUI.Rectangle();
-        expBarContainer.width = "300px";
-        expBarContainer.height = "20px";
-        expBarContainer.cornerRadius = 5;
-        expBarContainer.color = "white";
-        expBarContainer.thickness = 1;
-        expBarContainer.background = "rgba(0, 0, 0, 0.5)";
-        expBarContainer.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-        expBarContainer.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
-        expBarContainer.top = "-30px";
-        this.advancedTexture.addControl(expBarContainer);
-
-        // 创建经验条
-        const expBar = new BABYLON.GUI.Rectangle();
-        expBar.width = "0%";
-        expBar.height = "100%";
-        expBar.cornerRadius = 5;
-        expBar.background = "yellow";
-        expBar.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        expBarContainer.addControl(expBar);
-
-        // 保存引用
-        this.expBar = expBar;
-    }
 
     updateHealthBar() {
         if (this.healthBar) {
@@ -612,8 +593,8 @@ class Game {
     }
 }
 
-// 创建游戏实例
+// Création de l'instance du jeu
 const game = new Game();
 
-// 导出游戏实例，以便在控制台中使用
+// Export de l'instance pour le débogage
 window.game = game; 

@@ -56,81 +56,172 @@ class Terrain {
     }
 
     createComplexTerrain() {
-        // 创建基础地面
-        const ground = BABYLON.MeshBuilder.CreateGround("ground", {
-            width: 100,
-            height: 100
-        }, this.scene);
-        ground.position.y = 0;
-        ground.material = this.createMaterial("grass.jpg");
-        ground.metadata = { isGround: true, width: 100, height: 0.1, depth: 100 };
-
-        // 创建螺旋上升的平台路径
-        this.createSpiralPath();
+        // Créer le sol avec des textures plus sophistiquées
+        const groundSize = 100;
+        const cubeSize = 1;
         
-        // 创建一些辅助平台
-        this.createSupportPlatforms();
-    }
+        // Créer les matériaux avec des textures procédurales
+        const grassMaterials = this.createGrassMaterials();
+        const dirtMaterials = this.createDirtMaterials();
+        const stoneMaterials = this.createStoneMaterials();
 
-    createSpiralPath() {
-        // 创建一条螺旋上升的平台路径，通向终点门
-        const platformCount = 15;  // 增加平台数量
-        const heightIncrement = 4; // 降低每级高度增量，使路径更容易到达
-        const radius = 15;        // 缩小半径，使路径更紧凑
-        
-        for (let i = 0; i < platformCount; i++) {
-            const angle = (i / platformCount) * Math.PI * 2;
-            const x = Math.cos(angle) * radius;
-            const z = Math.sin(angle) * radius;
-            const y = (i + 1) * heightIncrement;
-            
-            // 主平台
-            const platform = BABYLON.MeshBuilder.CreateBox(`platform_${i}`, {
-                width: 6,         // 加宽平台
-                height: 1,
-                depth: 6
-            }, this.scene);
-            
-            platform.position = new BABYLON.Vector3(x, y, z);
-            platform.rotation.y = angle;
-            platform.material = this.createMaterial("stone.jpg");
-            platform.metadata = { width: 6, height: 1, depth: 6 };
-            
-            // 添加连接桥
-            if (i > 0) {
-                const prevAngle = ((i - 1) / platformCount) * Math.PI * 2;
-                const prevX = Math.cos(prevAngle) * radius;
-                const prevZ = Math.sin(prevAngle) * radius;
-                const prevY = i * heightIncrement;
+        // Créer un système de particules pour l'herbe
+        const grassParticles = new BABYLON.ParticleSystem("grassParticles", 2000, this.scene);
+        grassParticles.particleTexture = new BABYLON.Texture("textures/grass_particle.png", this.scene);
+        grassParticles.emitter = new BABYLON.Vector3(0, 0.1, 0);
+        grassParticles.minEmitBox = new BABYLON.Vector3(-groundSize/2, 0, -groundSize/2);
+        grassParticles.maxEmitBox = new BABYLON.Vector3(groundSize/2, 0, groundSize/2);
+        grassParticles.color1 = new BABYLON.Color4(0.4, 0.8, 0.4, 1.0);
+        grassParticles.color2 = new BABYLON.Color4(0.3, 0.7, 0.3, 1.0);
+        grassParticles.colorDead = new BABYLON.Color4(0.2, 0.5, 0.2, 0.0);
+        grassParticles.minSize = 0.1;
+        grassParticles.maxSize = 0.3;
+        grassParticles.minLifeTime = 0.3;
+        grassParticles.maxLifeTime = 1.5;
+        grassParticles.emitRate = 100;
+        grassParticles.gravity = new BABYLON.Vector3(0, 0.1, 0);
+        grassParticles.direction1 = new BABYLON.Vector3(-0.1, 1, -0.1);
+        grassParticles.direction2 = new BABYLON.Vector3(0.1, 1, 0.1);
+        grassParticles.start();
+
+        // Créer le terrain avec des variations de hauteur
+        for (let x = -groundSize/2; x < groundSize/2; x += cubeSize) {
+            for (let z = -groundSize/2; z < groundSize/2; z += cubeSize) {
+                // Calculer la hauteur avec du bruit de Perlin
+                const height = this.getNoiseHeight(x, z);
                 
-                const bridgeLength = Math.sqrt(
-                    Math.pow(x - prevX, 2) + 
-                    Math.pow(z - prevZ, 2)
-                );
-                
-                const bridge = BABYLON.MeshBuilder.CreateBox(`bridge_${i}`, {
-                    width: 3,     // 加宽桥
-                    height: 0.5,
-                    depth: bridgeLength
+                // Créer le cube avec la hauteur calculée
+                const ground = BABYLON.MeshBuilder.CreateBox("ground_" + x + "_" + z, {
+                    height: height,
+                    width: cubeSize,
+                    depth: cubeSize
                 }, this.scene);
                 
-                // 计算桥的位置和旋转
-                const midX = (x + prevX) / 2;
-                const midZ = (z + prevZ) / 2;
-                const midY = (y + prevY) / 2;
+                ground.position = new BABYLON.Vector3(x, height/2, z);
                 
-                bridge.position = new BABYLON.Vector3(midX, midY, midZ);
-                bridge.rotation.y = Math.atan2(z - prevZ, x - prevX);
+                // Appliquer une texture avec variation
+                const random = Math.random();
+                if (random < 0.7) {
+                    ground.material = grassMaterials[Math.floor(Math.random() * grassMaterials.length)];
+                } else if (random < 0.9) {
+                    ground.material = dirtMaterials[Math.floor(Math.random() * dirtMaterials.length)];
+                } else {
+                    ground.material = stoneMaterials[Math.floor(Math.random() * stoneMaterials.length)];
+                }
                 
-                bridge.material = this.createMaterial("wood.jpg");
-                bridge.metadata = { width: 3, height: 0.5, depth: bridgeLength };
+                // Ajouter des effets de brillance
+                ground.material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+                ground.material.specularPower = 32;
+                
+                ground.checkCollisions = true;
+                this.grounds.push(ground);
             }
         }
+
+        // Créer des plateformes avec des effets visuels améliorés
+        this.createEnhancedPlatforms();
     }
 
-    createSupportPlatforms() {
-        // 创建一些辅助平台，帮助玩家到达更高处
-        const supportPlatforms = [
+    getNoiseHeight(x, z) {
+        // Utiliser du bruit de Perlin pour créer des variations de hauteur naturelles
+        const scale = 0.1;
+        const height = (Math.sin(x * scale) * Math.cos(z * scale) + 1) * 0.5;
+        return 1 + height * 0.5; // Hauteur entre 1 et 1.5
+    }
+
+    createGrassMaterials() {
+        const materials = [];
+        const baseColors = [
+            new BABYLON.Color3(0.4, 0.8, 0.4),
+            new BABYLON.Color3(0.3, 0.7, 0.3),
+            new BABYLON.Color3(0.5, 0.9, 0.5),
+            new BABYLON.Color3(0.35, 0.75, 0.35)
+        ];
+
+        baseColors.forEach((baseColor, index) => {
+            const material = new BABYLON.StandardMaterial("grassMaterial_" + index, this.scene);
+            material.diffuseColor = baseColor;
+            
+            // Ajouter des variations de texture avec du bruit
+            const noise = Math.random() * 0.1;
+            material.diffuseColor.r += noise;
+            material.diffuseColor.g += noise;
+            material.diffuseColor.b += noise;
+            
+            // Effet de brillance amélioré
+            material.specularColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+            material.specularPower = 64;
+            
+            // Ajouter un effet de fresnel pour plus de profondeur
+            material.emissiveColor = baseColor.scale(0.1);
+            material.useEmissiveAsIllumination = true;
+            
+            materials.push(material);
+        });
+
+        return materials;
+    }
+
+    createDirtMaterials() {
+        const materials = [];
+        const baseColors = [
+            new BABYLON.Color3(0.6, 0.4, 0.2),  // Marron clair
+            new BABYLON.Color3(0.5, 0.3, 0.1),  // Marron moyen
+            new BABYLON.Color3(0.7, 0.5, 0.3),  // Marron sable
+            new BABYLON.Color3(0.4, 0.2, 0.1)   // Marron foncé
+        ];
+
+        baseColors.forEach((baseColor, index) => {
+            const material = new BABYLON.StandardMaterial("dirtMaterial_" + index, this.scene);
+            material.diffuseColor = baseColor;
+            
+            // Ajouter des variations de texture
+            const noise = Math.random() * 0.15;
+            material.diffuseColor.r += noise;
+            material.diffuseColor.g += noise;
+            material.diffuseColor.b += noise;
+            
+            // Texture rugueuse
+            material.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+            material.specularPower = 16;
+            
+            materials.push(material);
+        });
+
+        return materials;
+    }
+
+    createStoneMaterials() {
+        const materials = [];
+        const baseColors = [
+            new BABYLON.Color3(0.7, 0.7, 0.7),  // Gris clair
+            new BABYLON.Color3(0.6, 0.6, 0.6),  // Gris moyen
+            new BABYLON.Color3(0.5, 0.5, 0.5),  // Gris foncé
+            new BABYLON.Color3(0.8, 0.8, 0.8)   // Gris très clair
+        ];
+
+        baseColors.forEach((baseColor, index) => {
+            const material = new BABYLON.StandardMaterial("stoneMaterial_" + index, this.scene);
+            material.diffuseColor = baseColor;
+            
+            // Ajouter des variations de texture
+            const noise = Math.random() * 0.2;
+            material.diffuseColor.r += noise;
+            material.diffuseColor.g += noise;
+            material.diffuseColor.b += noise;
+            
+            // Texture lisse
+            material.specularColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+            material.specularPower = 64;
+            
+            materials.push(material);
+        });
+
+        return materials;
+    }
+
+    createEnhancedPlatforms() {
+        const platformPositions = [
             { x: 10, y: 8, z: 10, size: 4 },
             { x: -8, y: 12, z: -8, size: 4 },
             { x: 5, y: 16, z: -12, size: 4 },
@@ -139,24 +230,94 @@ class Terrain {
             { x: -5, y: 28, z: 12, size: 4 },
             { x: 8, y: 32, z: 8, size: 4 },
             { x: -12, y: 36, z: -10, size: 4 },
-            { x: 0, y: 40, z: 0, size: 5 },  // 靠近终点的大平台
+            { x: 0, y: 40, z: 0, size: 5 }
         ];
 
-        supportPlatforms.forEach((platform, index) => {
-            const box = BABYLON.MeshBuilder.CreateBox(`support_${index}`, {
-                width: platform.size,
-                height: 1,
-                depth: platform.size
-            }, this.scene);
+        // Créer des matériaux de plateforme améliorés
+        const platformMaterials = this.createEnhancedPlatformMaterials();
+
+        platformPositions.forEach((pos, index) => {
+            // Créer une plateforme avec des effets visuels
+            const platform = this.createPlatformWithEffects(pos, platformMaterials);
             
-            box.position = new BABYLON.Vector3(platform.x, platform.y, platform.z);
-            box.material = this.createMaterial("stone.jpg");
-            box.metadata = { 
-                width: platform.size, 
-                height: 1, 
-                depth: platform.size 
-            };
+            // Ajouter des effets de particules pour les plateformes
+            this.addPlatformParticles(platform);
         });
+    }
+
+    createPlatformWithEffects(position, materials) {
+        const platform = BABYLON.MeshBuilder.CreateBox(`platform_${position.x}_${position.y}_${position.z}`, {
+            size: position.size
+        }, this.scene);
+        
+        platform.position = new BABYLON.Vector3(position.x, position.y, position.z);
+        
+        // Appliquer un matériau avec des effets
+        platform.material = materials[Math.floor(Math.random() * materials.length)];
+        
+        // Ajouter des effets de brillance
+        platform.material.specularColor = new BABYLON.Color3(0.4, 0.4, 0.4);
+        platform.material.specularPower = 128;
+        
+        // Ajouter un effet de fresnel
+        platform.material.emissiveColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+        platform.material.useEmissiveAsIllumination = true;
+        
+        platform.checkCollisions = true;
+        this.platforms.push(platform);
+        
+        return platform;
+    }
+
+    addPlatformParticles(platform) {
+        const particles = new BABYLON.ParticleSystem("platformParticles", 100, this.scene);
+        particles.particleTexture = new BABYLON.Texture("textures/sparkle.png", this.scene);
+        particles.emitter = platform.position;
+        particles.minEmitBox = new BABYLON.Vector3(-0.5, -0.5, -0.5);
+        particles.maxEmitBox = new BABYLON.Vector3(0.5, 0.5, 0.5);
+        particles.color1 = new BABYLON.Color4(1, 1, 1, 1);
+        particles.color2 = new BABYLON.Color4(1, 0.8, 0.2, 1);
+        particles.colorDead = new BABYLON.Color4(0, 0, 0, 0);
+        particles.minSize = 0.1;
+        particles.maxSize = 0.3;
+        particles.minLifeTime = 0.3;
+        particles.maxLifeTime = 1.5;
+        particles.emitRate = 10;
+        particles.gravity = new BABYLON.Vector3(0, 0.1, 0);
+        particles.start();
+    }
+
+    createEnhancedPlatformMaterials() {
+        const materials = [];
+        const baseColors = [
+            new BABYLON.Color3(0.8, 0.6, 0.4),
+            new BABYLON.Color3(0.7, 0.5, 0.3),
+            new BABYLON.Color3(0.6, 0.4, 0.2),
+            new BABYLON.Color3(0.9, 0.7, 0.5)
+        ];
+
+        baseColors.forEach((baseColor, index) => {
+            const material = new BABYLON.StandardMaterial("platformMaterial_" + index, this.scene);
+            material.diffuseColor = baseColor;
+            
+            // Ajouter des variations de texture
+            const noise = Math.random() * 0.1;
+            material.diffuseColor.r += noise;
+            material.diffuseColor.g += noise;
+            material.diffuseColor.b += noise;
+            
+            // Effet de brillance amélioré
+            material.specularColor = new BABYLON.Color3(0.4, 0.4, 0.4);
+            material.specularPower = 128;
+            
+            // Ajouter un effet de fresnel
+            material.emissiveColor = baseColor.scale(0.2);
+            material.useEmissiveAsIllumination = true;
+            
+            materials.push(material);
+        });
+
+        return materials;
     }
 
     createPlatform(x, y, z, width, height, depth, r, g, b) {
@@ -372,50 +533,118 @@ class Terrain {
     }
 
     createFinishGate() {
-        // 创建终点门（调整高度）
-        const gateHeight = 45;  // 降低门的高度，使其更容易到达
-        const gateFrame = BABYLON.MeshBuilder.CreateBox("finishGate", {
-            width: 4,
-            height: 6,
-            depth: 1
-        }, this.scene);
+        // Créer une porte de fin avec des effets visuels améliorés
+        const gateMaterials = this.createEnhancedGateMaterials();
         
-        gateFrame.position = new BABYLON.Vector3(0, gateHeight, 0);
-        
-        // 创建门的材质（发光效果）
-        const gateMaterial = new BABYLON.StandardMaterial("gateMaterial", this.scene);
-        gateMaterial.emissiveColor = new BABYLON.Color3(0.5, 0, 1);
-        gateMaterial.alpha = 0.7;
-        gateFrame.material = gateMaterial;
-        
-        // 添加粒子效果
-        const particleSystem = new BABYLON.ParticleSystem("gateParticles", 2000, this.scene);
-        particleSystem.particleTexture = new BABYLON.Texture("textures/flare.png", this.scene);
-        particleSystem.emitter = gateFrame;
-        particleSystem.minEmitBox = new BABYLON.Vector3(-2, -3, 0);
-        particleSystem.maxEmitBox = new BABYLON.Vector3(2, 3, 0);
-        particleSystem.color1 = new BABYLON.Color4(0.7, 0, 1.0, 1.0);
-        particleSystem.color2 = new BABYLON.Color4(0.2, 0, 1.0, 1.0);
-        particleSystem.colorDead = new BABYLON.Color4(0, 0, 0.2, 0.0);
-        particleSystem.minSize = 0.1;
-        particleSystem.maxSize = 0.5;
-        particleSystem.minLifeTime = 0.3;
-        particleSystem.maxLifeTime = 1.5;
-        particleSystem.emitRate = 100;
-        particleSystem.start();
+        // Créer les piliers avec des effets
+        for (let y = 0; y < 4; y++) {
+            this.createGatePillar(-2, y, 0, gateMaterials);
+            this.createGatePillar(2, y, 0, gateMaterials);
+        }
 
-        // 添加碰撞检测
-        gateFrame.metadata = {
-            isFinishGate: true,
-            width: 4,
-            height: 6,
-            depth: 1
-        };
+        // Créer le linteau avec des effets
+        for (let x = -2; x <= 2; x++) {
+            this.createGateLintel(x, 4, 0, gateMaterials);
+        }
+
+        // Ajouter des effets de particules pour la porte
+        this.addGateParticles();
     }
 
-    createMaterial(textureName) {
-        const material = new BABYLON.StandardMaterial(textureName, this.scene);
-        material.diffuseTexture = new BABYLON.Texture(`textures/${textureName}`, this.scene);
+    createGatePillar(x, y, z, materials) {
+        const pillar = BABYLON.MeshBuilder.CreateBox("pillar_" + x + "_" + y, {
+            size: 1
+        }, this.scene);
+        
+        pillar.position = new BABYLON.Vector3(x, y, z);
+        pillar.material = materials[Math.floor(Math.random() * materials.length)];
+        
+        // Ajouter des effets de brillance
+        pillar.material.specularColor = new BABYLON.Color3(0.8, 0.8, 0.8);
+        pillar.material.specularPower = 256;
+        
+        // Ajouter un effet de fresnel
+        pillar.material.emissiveColor = new BABYLON.Color3(0.5, 0.4, 0);
+        pillar.material.useEmissiveAsIllumination = true;
+        
+        return pillar;
+    }
+
+    createGateLintel(x, y, z, materials) {
+        const lintel = BABYLON.MeshBuilder.CreateBox("lintel_" + x, {
+            size: 1
+        }, this.scene);
+        
+        lintel.position = new BABYLON.Vector3(x, y, z);
+        lintel.material = materials[Math.floor(Math.random() * materials.length)];
+        
+        // Ajouter des effets de brillance
+        lintel.material.specularColor = new BABYLON.Color3(0.8, 0.8, 0.8);
+        lintel.material.specularPower = 256;
+        
+        // Ajouter un effet de fresnel
+        lintel.material.emissiveColor = new BABYLON.Color3(0.5, 0.4, 0);
+        lintel.material.useEmissiveAsIllumination = true;
+        
+        return lintel;
+    }
+
+    addGateParticles() {
+        const particles = new BABYLON.ParticleSystem("gateParticles", 200, this.scene);
+        particles.particleTexture = new BABYLON.Texture("textures/sparkle.png", this.scene);
+        particles.emitter = new BABYLON.Vector3(0, 2, 0);
+        particles.minEmitBox = new BABYLON.Vector3(-2, 0, -0.5);
+        particles.maxEmitBox = new BABYLON.Vector3(2, 4, 0.5);
+        particles.color1 = new BABYLON.Color4(1, 0.8, 0, 1);
+        particles.color2 = new BABYLON.Color4(1, 1, 0.5, 1);
+        particles.colorDead = new BABYLON.Color4(0, 0, 0, 0);
+        particles.minSize = 0.1;
+        particles.maxSize = 0.3;
+        particles.minLifeTime = 0.3;
+        particles.maxLifeTime = 1.5;
+        particles.emitRate = 20;
+        particles.gravity = new BABYLON.Vector3(0, 0.1, 0);
+        particles.start();
+    }
+
+    createEnhancedGateMaterials() {
+        const materials = [];
+        const baseColors = [
+            new BABYLON.Color3(1.0, 0.8, 0.0),
+            new BABYLON.Color3(0.9, 0.7, 0.0),
+            new BABYLON.Color3(1.0, 0.9, 0.2),
+            new BABYLON.Color3(0.8, 0.6, 0.0)
+        ];
+
+        baseColors.forEach((baseColor, index) => {
+            const material = new BABYLON.StandardMaterial("gateMaterial_" + index, this.scene);
+            material.diffuseColor = baseColor;
+            
+            // Effet lumineux amélioré
+            material.emissiveColor = baseColor.scale(0.5);
+            material.useEmissiveAsIllumination = true;
+            
+            // Ajouter des variations de texture
+            const noise = Math.random() * 0.1;
+            material.diffuseColor.r += noise;
+            material.diffuseColor.g += noise;
+            material.diffuseColor.b += noise;
+            
+            // Texture métallique améliorée
+            material.specularColor = new BABYLON.Color3(0.8, 0.8, 0.8);
+            material.specularPower = 256;
+            
+            materials.push(material);
+        });
+
+        return materials;
+    }
+
+    createMaterial() {
+        const material = new BABYLON.StandardMaterial("terrainMaterial", this.scene);
+        material.diffuseColor = new BABYLON.Color3(0.2, 0.8, 0.2); // Vert pour l'herbe
+        material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+        material.emissiveColor = new BABYLON.Color3(0.1, 0.1, 0.1);
         return material;
     }
 }
