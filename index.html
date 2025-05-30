@@ -282,18 +282,20 @@
     </div>
 
     <div id="info-panel">
-        <h2 class="title" style="font-size: 36px;">INFORMATIONS</h2>
-        <div class="info-text">
+        <h2 class="title" style="font-size: 36px;" data-translate="info">INFORMATIONS</h2>
+        <div class="info-text" data-translate="welcome">
             Bienvenue dans Cloud Bounce ! Votre objectif est de naviguer à travers les plateformes 
             flottantes et d'atteindre le portail final tout en combattant les ennemis qui se 
             dressent sur votre chemin.
         </div>
         <div class="controls-list">
-            <p>Espace : Saut</p>
-            <p>Clic gauche : Tirer</p>
-            <p>Clic droit : Viser</p>
+            <h3 data-translate="controls">Contrôles :</h3>
+            <p data-translate="moveControls">ZQSD : Déplacement</p>
+            <p data-translate="jumpControl">Espace : Saut</p>
+            <p data-translate="shootControl">Clic gauche : Tirer</p>
+            <p data-translate="aimControl">Clic droit : Viser</p>
         </div>
-        <button class="button" onclick="showMenu()">RETOUR</button>
+        <button class="button" onclick="showMenu()" data-translate="back">RETOUR</button>
     </div>
 
     <div id="game-container">
@@ -325,6 +327,8 @@
                 save: "SAUVEGARDER",
                 back: "RETOUR",
                 welcome: "Bienvenue dans Cloud Bounce ! Votre objectif est de naviguer à travers les plateformes flottantes et d'atteindre le portail final tout en combattant les ennemis qui se dressent sur votre chemin.",
+                controls: "Contrôles :",
+                moveControls: "ZQSD : Déplacement",
                 jumpControl: "Espace : Saut",
                 shootControl: "Clic gauche : Tirer",
                 aimControl: "Clic droit : Viser",
@@ -343,6 +347,8 @@
                 save: "SAVE",
                 back: "BACK",
                 welcome: "Welcome to Cloud Bounce! Your goal is to navigate through floating platforms and reach the final portal while fighting enemies that stand in your way.",
+                controls: "Controls:",
+                moveControls: "WASD: Movement",
                 jumpControl: "Space: Jump",
                 shootControl: "Left Click: Shoot",
                 aimControl: "Right Click: Aim",
@@ -420,6 +426,13 @@
         function updateLanguage(lang) {
             gameSettings.language = lang;
             
+            document.querySelectorAll('[data-translate]').forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (translations[lang][key]) {
+                    element.textContent = translations[lang][key];
+                }
+            });
+
             document.querySelector('button[onclick="startGame()"]').textContent = translations[lang].play;
             document.querySelector('button[onclick="showSettings()"]').textContent = translations[lang].settings;
             document.querySelector('button[onclick="showInfo()"]').textContent = translations[lang].info;
@@ -429,21 +442,6 @@
                 if (title.textContent.includes('Langue')) title.textContent = translations[lang].language;
                 if (title.textContent.includes('Clavier')) title.textContent = translations[lang].keyboard;
             });
-            
-            document.querySelectorAll('.button').forEach(button => {
-                if (button.textContent.includes('SAUVEGARDER')) button.textContent = translations[lang].save;
-                if (button.textContent.includes('RETOUR')) button.textContent = translations[lang].back;
-            });
-            
-            document.querySelector('.info-text').textContent = translations[lang].welcome;
-            document.querySelector('.controls-list h3').textContent = translations[lang].controls;
-            
-            const controlsList = document.querySelector('.controls-list');
-            const controls = controlsList.querySelectorAll('p');
-            controls[0].textContent = translations[lang].moveControls;
-            controls[1].textContent = translations[lang].jumpControl;
-            controls[2].textContent = translations[lang].shootControl;
-            controls[3].textContent = translations[lang].aimControl;
             
             const languageLabels = document.querySelectorAll('input[name="language"] + span');
             languageLabels[0].textContent = translations[lang].french;
