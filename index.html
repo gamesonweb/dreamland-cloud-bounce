@@ -230,6 +230,96 @@
             height: 100%;
             touch-action: none;
         }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            z-index: 2000;
+        }
+
+        .loading-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 20px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #3498db;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .loading-text {
+            font-size: 20px;
+            color: white;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            z-index: 1000;
+        }
+
+        .tutorial-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 500px;
+            text-align: center;
+            color: white;
+        }
+
+        .tutorial-emoji {
+            font-size: 40px;
+            margin: 10px 0;
+        }
+
+        .tutorial-text {
+            font-size: 18px;
+            line-height: 1.4;
+            margin: 15px 0;
+        }
+
+        .tutorial-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: background 0.2s;
+        }
+
+        .tutorial-button:hover {
+            background: #2980b9;
+        }
     </style>
 </head>
 <body>
@@ -299,7 +389,26 @@
     </div>
 
     <div id="game-container">
-        <canvas id="renderCanvas"></canvas>
+    <canvas id="renderCanvas"></canvas>
+    </div>
+
+    <div class="tutorial-overlay" id="tutorial">
+        <div class="tutorial-content">
+            <div class="tutorial-emoji" id="tutorial-emoji"></div>
+            <div class="tutorial-text" id="tutorial-text"></div>
+            <button class="tutorial-button" id="tutorial-next" data-translate="next">SUIVANT</button>
+            <button class="tutorial-button" id="tutorial-start" style="display: none;" data-translate="startGame">COMMENCER</button>
+        </div>
+    </div>
+
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-progress">
+                <div class="loading-progress-bar"></div>
+            </div>
+            <div class="loading-text" data-translate="loading">Chargement en cours...</div>
+        </div>
     </div>
 
     <audio id="menuMusic" loop>
@@ -315,7 +424,145 @@
     <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
     
     <script>
-        // Système de traduction
+        let currentTutorialStep = 0;
+        const totalTutorialSteps = 5;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM chargé, initialisation des écouteurs...');
+            
+            const tutorialNext = document.getElementById('tutorial-next');
+            const tutorialStart = document.getElementById('tutorial-start');
+            
+            if (tutorialNext) {
+                tutorialNext.addEventListener('click', function() {
+                    console.log('Clic sur Suivant, étape actuelle:', currentTutorialStep);
+                    nextTutorialStep();
+                });
+            } else {
+                console.error('Bouton Suivant non trouvé');
+            }
+            
+            if (tutorialStart) {
+                tutorialStart.addEventListener('click', function() {
+                    console.log('Clic sur Commencer');
+                    startGameAfterTutorial();
+                });
+            } else {
+                console.error('Bouton Commencer non trouvé');
+            }
+            
+            initializeMusic();
+            updateLanguage(gameSettings.language);
+            toggleClouds(true);
+        });
+
+        function showTutorial() {
+            console.log('Affichage du tutoriel...');
+            currentTutorialStep = 0; 
+            
+            const tutorial = document.getElementById('tutorial');
+            if (!tutorial) {
+                console.error('Élément tutorial non trouvé');
+                return;
+            }
+            
+            tutorial.style.display = 'block';
+            console.log('Tutoriel affiché, mise à jour du contenu...');
+            updateTutorialContent();
+        }
+
+        function updateTutorialContent() {
+            console.log('Mise à jour du contenu du tutoriel, étape:', currentTutorialStep + 1);
+            
+            const lang = gameSettings.language;
+            const tutorialText = document.getElementById('tutorial-text');
+            const tutorialEmoji = document.getElementById('tutorial-emoji');
+            const nextButton = document.getElementById('tutorial-next');
+            const startButton = document.getElementById('tutorial-start');
+            
+            if (!tutorialText || !tutorialEmoji || !nextButton || !startButton) {
+                console.error('Éléments du tutoriel manquants');
+                return;
+            }
+
+            const currentTutorial = translations[lang][`tutorial${currentTutorialStep + 1}`];
+            if (!currentTutorial) {
+                console.error('Traduction non trouvée pour l\'étape', currentTutorialStep + 1);
+                return;
+            }
+
+            tutorialText.textContent = currentTutorial.text;
+            tutorialEmoji.textContent = currentTutorial.emoji;
+
+            nextButton.style.display = currentTutorialStep === totalTutorialSteps - 1 ? 'none' : 'inline-block';
+            startButton.style.display = currentTutorialStep === totalTutorialSteps - 1 ? 'inline-block' : 'none';
+            
+            console.log('Contenu du tutoriel mis à jour');
+        }
+
+        function nextTutorialStep() {
+            console.log('Passage à l\'étape suivante');
+            if (currentTutorialStep < totalTutorialSteps - 1) {
+                currentTutorialStep++;
+                updateTutorialContent();
+            }
+        }
+
+        function startGameAfterTutorial() {
+            console.log('Démarrage du jeu après le tutoriel');
+            const lang = gameSettings.language;
+            const tutorial = document.getElementById('tutorial');
+            
+            if (tutorial) {
+                tutorial.style.display = 'none';
+            }
+
+            showLoadingScreen(true, translations[lang].loadingGame);
+            
+            const canvas = document.getElementById('renderCanvas');
+            const engine = new BABYLON.Engine(canvas, true);
+            
+            console.log('Chargement du module de jeu...');
+            import('./game.js').then(module => {
+                console.log('Module de jeu chargé, création de l\'instance...');
+                showLoadingScreen(true, translations[lang].loadingAssets);
+                setTimeout(() => {
+                    window.game = new module.default(gameSettings);
+                    showLoadingScreen(false);
+                }, 500); 
+            }).catch(error => {
+                console.error('Erreur lors du chargement du module de jeu:', error);
+                showLoadingScreen(false);
+            });
+        }
+
+        function startGame() {
+            console.log('Démarrage du jeu...');
+            const lang = gameSettings.language;
+            
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            toggleClouds(false);
+            
+            if (menuMusic) {
+                menuMusic.volume = gameSettings.muted ? 0 : (gameSettings.volume / 100) * 0.3;
+            }
+            
+            showLoadingScreen(true);
+            
+            setTimeout(() => {
+                showLoadingScreen(false);
+                showTutorial();
+            }, 500);
+
+            if (gameMusic && gameMusic.play) {
+                gameMusic.volume = gameSettings.muted ? 0 : (gameSettings.volume / 100) * 0.7;
+                gameMusic.play().catch(error => {
+                    console.error('Erreur lors du démarrage de la musique:', error);
+                });
+            }
+        }
+
         const translations = {
             fr: {
                 play: "JOUER",
@@ -335,7 +582,33 @@
                 french: "Français",
                 english: "English",
                 azerty: "AZERTY",
-                qwerty: "QWERTY"
+                qwerty: "QWERTY",
+                next: "SUIVANT",
+                startGame: "COMMENCER",
+                tutorial1: {
+                    emoji: "☁️",
+                    text: "Bienvenue dans Cloud Bounce !"
+                },
+                tutorial2: {
+                    emoji: "🏃",
+                    text: "Grimpez les plateformes pour atteindre le sommet."
+                },
+                tutorial3: {
+                    emoji: "⚔️",
+                    text: "Attention aux ennemis ! Soyez rapide et agile."
+                },
+                tutorial4: {
+                    emoji: "🎯",
+                    text: "Explorez la carte et trouvez le meilleur chemin."
+                },
+                tutorial5: {
+                    emoji: "🌀",
+                    text: "Trouvez le portail dimensionnel pour gagner !"
+                },
+                loading: "Chargement en cours...",
+                loadingGame: "Chargement du jeu...",
+                loadingAssets: "Chargement des ressources...",
+                loadingComplete: "Chargement terminé !"
             },
             en: {
                 play: "PLAY",
@@ -355,7 +628,33 @@
                 french: "French",
                 english: "English",
                 azerty: "AZERTY",
-                qwerty: "QWERTY"
+                qwerty: "QWERTY",
+                next: "NEXT",
+                startGame: "START",
+                tutorial1: {
+                    emoji: "☁️",
+                    text: "Welcome to Cloud Bounce!"
+                },
+                tutorial2: {
+                    emoji: "🏃",
+                    text: "Climb the platforms to reach the top."
+                },
+                tutorial3: {
+                    emoji: "⚔️",
+                    text: "Watch out for enemies! Be quick and agile."
+                },
+                tutorial4: {
+                    emoji: "🎯",
+                    text: "Explore the map and find the best path."
+                },
+                tutorial5: {
+                    emoji: "🌀",
+                    text: "Find the dimensional portal to win!"
+                },
+                loading: "Loading...",
+                loadingGame: "Loading game...",
+                loadingAssets: "Loading assets...",
+                loadingComplete: "Loading complete!"
             }
         };
 
@@ -480,49 +779,6 @@
             toggleClouds(true);
         }
 
-        function startGame() {
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('game-container').style.display = 'block';
-            toggleClouds(false);
-            
-            if (menuMusic) {
-                menuMusic.volume = gameSettings.muted ? 0 : (gameSettings.volume / 100) * 0.3; // Volume réduit pendant le jeu
-            }
-            
-            if (gameMusic && gameMusic.play) {
-                gameMusic.volume = gameSettings.muted ? 0 : (gameSettings.volume / 100) * 0.7;
-                const playPromise = gameMusic.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        console.log('Musique du jeu démarrée');
-                        
-                        let fadeInterval = setInterval(() => {
-                            if (menuMusic && menuMusic.volume > 0) {
-                                menuMusic.volume = Math.max(0, menuMusic.volume - 0.1);
-                            }
-                            if (gameMusic.volume < (gameSettings.muted ? 0 : (gameSettings.volume / 100))) {
-                                gameMusic.volume = Math.min(
-                                    gameSettings.muted ? 0 : (gameSettings.volume / 100),
-                                    gameMusic.volume + 0.1
-                                );
-                            }
-                            if (menuMusic.volume === 0 && gameMusic.volume >= (gameSettings.muted ? 0 : (gameSettings.volume / 100))) {
-                                clearInterval(fadeInterval);
-                            }
-                        }, 100);
-                    }).catch(error => {
-                        console.error('Erreur lors du démarrage de la musique du jeu:', error);
-                    });
-                }
-            }
-            
-            const canvas = document.getElementById('renderCanvas');
-            const engine = new BABYLON.Engine(canvas, true);
-            import('./game.js').then(module => {
-                window.game = new module.default(gameSettings);
-            });
-        }
-
         function saveSettings() {
             gameSettings.volume = parseInt(volumeSlider.value);
             const newLanguage = document.querySelector('input[name="language"]:checked').value;
@@ -545,12 +801,6 @@
             showMenu();
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            initializeMusic();
-            updateLanguage(gameSettings.language);
-            toggleClouds(true); 
-        });
-
         window.addEventListener('resize', function() {
             if (window.game && window.game.engine) {
                 window.game.engine.resize();
@@ -563,6 +813,25 @@
             
             if (menuMusic) menuMusic.volume = menuVolume;
             if (gameMusic) gameMusic.volume = gameVolume;
+        }
+
+        function showLoadingScreen(show, message = null) {
+            const loadingScreen = document.getElementById('loadingScreen');
+            const loadingText = loadingScreen.querySelector('.loading-text');
+            
+            if (show) {
+                loadingScreen.style.display = 'block';
+                loadingScreen.style.opacity = '1';
+                if (message) {
+                    loadingText.textContent = message;
+                }
+            } else {
+                loadingScreen.classList.add('fade-out');
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                    loadingScreen.classList.remove('fade-out');
+                }, 500);
+            }
         }
     </script>
 </body>
