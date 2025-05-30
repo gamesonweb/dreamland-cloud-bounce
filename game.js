@@ -552,4 +552,6 @@ class Game {
 const game = new Game();
 
 // 导出游戏实例，以便在控制台中使用
-window.game = game; 
+window.game = game;
+
+export default Game; 

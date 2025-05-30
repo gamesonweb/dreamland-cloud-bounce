@@ -15,18 +15,557 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%);
+            font-family: Arial, sans-serif;
         }
+
+       
+        @keyframes float {
+            0% { transform: translateX(100vw); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .cloud {
+            position: absolute;
+            width: 100px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            animation: float linear infinite;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            z-index: 1;
+            display: none; 
+        }
+
+        .cloud::before, .cloud::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+        }
+
+        .cloud::before {
+            width: 50px;
+            height: 50px;
+            top: -20px;
+            left: 15px;
+        }
+
+        .cloud::after {
+            width: 30px;
+            height: 30px;
+            top: -10px;
+            left: 45px;
+        }
+
+        .cloud:nth-child(1) { top: 20%; animation-duration: 60s; }
+        .cloud:nth-child(2) { top: 40%; animation-duration: 75s; animation-delay: -15s; }
+        .cloud:nth-child(3) { top: 60%; animation-duration: 95s; animation-delay: -45s; }
+        .cloud:nth-child(4) { top: 80%; animation-duration: 70s; animation-delay: -30s; }
+
+        #menu, #settings-panel, #info-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            min-width: 300px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            z-index: 10; 
+        }
+
+        #settings-panel, #info-panel {
+            display: none;
+            color: white;
+            max-width: 500px;
+        }
+
+        .title {
+            color: white;
+            font-size: 48px;
+            margin-bottom: 40px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: 2px;
+        }
+
+        .button {
+            display: block;
+            width: 250px;
+            padding: 15px;
+            margin: 15px auto;
+            background: rgba(0, 114, 255, 0.7);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .button:hover {
+            background: rgba(0, 114, 255, 0.9);
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .setting-group {
+            margin: 25px 0;
+            text-align: left;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .setting-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .radio-group {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+        }
+
+        .radio-group label {
+            color: white;
+            cursor: pointer;
+            padding: 5px 15px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .radio-group label:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+
+        .volume-slider {
+            flex: 1;
+            margin: 0 10px;
+            height: 5px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .volume-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .mute-button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 5px 10px;
+            font-size: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .mute-button:hover {
+            transform: scale(1.1);
+        }
+
+        .info-text {
+            text-align: left;
+            line-height: 1.8;
+            margin: 20px 0;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .controls-list {
+            text-align: left;
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .controls-list h3 {
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        .controls-list p {
+            color: white;
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        #game-container {
+            display: none;
+            width: 100%;
+            height: 100%;
+        }
+
         #renderCanvas {
             width: 100%;
             height: 100%;
+            touch-action: none;
         }
     </style>
 </head>
 <body>
-    <canvas id="renderCanvas"></canvas>
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+
+    <div id="menu">
+        <h1 class="title">CLOUD BOUNCE</h1>
+        <button class="button" onclick="startGame()">JOUER</button>
+        <button class="button" onclick="showSettings()">PARAMÈTRES</button>
+        <button class="button" onclick="showInfo()">INFORMATIONS</button>
+    </div>
+
+    <div id="settings-panel">
+        <h2 class="title" style="font-size: 36px;">PARAMÈTRES</h2>
+        <div class="setting-group">
+            <div class="setting-title">Volume</div>
+            <div class="volume-control">
+                <button class="mute-button" onclick="toggleMute()">🔊</button>
+                <input type="range" id="volume-slider" class="volume-slider" min="0" max="100" value="50">
+                <span id="volume-value" style="color: white;">50%</span>
+            </div>
+        </div>
+        <div class="setting-group">
+            <div class="setting-title">Langue</div>
+            <div class="radio-group">
+                <label>
+                    <input type="radio" name="language" value="fr" checked> Français
+                </label>
+                <label>
+                    <input type="radio" name="language" value="en"> English
+                </label>
+            </div>
+        </div>
+        <div class="setting-group">
+            <div class="setting-title">Clavier</div>
+            <div class="radio-group">
+                <label>
+                    <input type="radio" name="keyboard" value="azerty" checked> AZERTY
+                </label>
+                <label>
+                    <input type="radio" name="keyboard" value="qwerty"> QWERTY
+                </label>
+            </div>
+        </div>
+        <button class="button" onclick="saveSettings()">SAUVEGARDER</button>
+        <button class="button" onclick="showMenu()">RETOUR</button>
+    </div>
+
+    <div id="info-panel">
+        <h2 class="title" style="font-size: 36px;">INFORMATIONS</h2>
+        <div class="info-text">
+            Bienvenue dans Cloud Bounce ! Votre objectif est de naviguer à travers les plateformes 
+            flottantes et d'atteindre le portail final tout en combattant les ennemis qui se 
+            dressent sur votre chemin.
+        </div>
+        <div class="controls-list">
+            <p>Espace : Saut</p>
+            <p>Clic gauche : Tirer</p>
+            <p>Clic droit : Viser</p>
+        </div>
+        <button class="button" onclick="showMenu()">RETOUR</button>
+    </div>
+
+    <div id="game-container">
+        <canvas id="renderCanvas"></canvas>
+    </div>
+
+    <audio id="menuMusic" loop>
+        <source src="sounds/menu-music.mp3" type="audio/mp3">
+    </audio>
+    <audio id="gameMusic" loop>
+        <source src="sounds/game-music.mp3" type="audio/mp3">
+    </audio>
+
+    <!-- Babylon.js -->
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
     <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
-    <script type="module" src="game.js"></script>
+    
+    <script>
+        // Système de traduction
+        const translations = {
+            fr: {
+                play: "JOUER",
+                settings: "PARAMÈTRES",
+                info: "INFORMATIONS",
+                volume: "Volume",
+                language: "Langue",
+                keyboard: "Clavier",
+                save: "SAUVEGARDER",
+                back: "RETOUR",
+                welcome: "Bienvenue dans Cloud Bounce ! Votre objectif est de naviguer à travers les plateformes flottantes et d'atteindre le portail final tout en combattant les ennemis qui se dressent sur votre chemin.",
+                jumpControl: "Espace : Saut",
+                shootControl: "Clic gauche : Tirer",
+                aimControl: "Clic droit : Viser",
+                french: "Français",
+                english: "English",
+                azerty: "AZERTY",
+                qwerty: "QWERTY"
+            },
+            en: {
+                play: "PLAY",
+                settings: "SETTINGS",
+                info: "INFORMATION",
+                volume: "Volume",
+                language: "Language",
+                keyboard: "Keyboard",
+                save: "SAVE",
+                back: "BACK",
+                welcome: "Welcome to Cloud Bounce! Your goal is to navigate through floating platforms and reach the final portal while fighting enemies that stand in your way.",
+                jumpControl: "Space: Jump",
+                shootControl: "Left Click: Shoot",
+                aimControl: "Right Click: Aim",
+                french: "French",
+                english: "English",
+                azerty: "AZERTY",
+                qwerty: "QWERTY"
+            }
+        };
+
+        let gameSettings = {
+            volume: 50,
+            language: 'fr',
+            keyboard: 'azerty',
+            muted: false
+        };
+
+        const menuMusic = document.getElementById('menuMusic');
+        const gameMusic = document.getElementById('gameMusic');
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeValue = document.getElementById('volume-value');
+        const muteButton = document.querySelector('.mute-button');
+        const clouds = document.querySelectorAll('.cloud');
+
+        function toggleMute() {
+            gameSettings.muted = !gameSettings.muted;
+            menuMusic.muted = gameSettings.muted;
+            gameMusic.muted = gameSettings.muted;
+            muteButton.textContent = gameSettings.muted ? '🔇' : '🔊';
+            
+            volumeSlider.disabled = gameSettings.muted;
+            updateMusicVolume();
+        }
+
+        volumeSlider.addEventListener('input', function() {
+            volumeValue.textContent = this.value + '%';
+        });
+
+        function initializeMusic() {
+            menuMusic.addEventListener('error', function(e) {
+                console.error('Erreur de chargement de la musique du menu:', e);
+                alert('Erreur de chargement de la musique du menu. Vérifiez que le fichier existe dans le dossier sounds/');
+            });
+
+            menuMusic.addEventListener('canplaythrough', function() {
+                console.log('Musique du menu chargée avec succès');
+            });
+
+            menuMusic.addEventListener('ended', function() {
+                menuMusic.currentTime = 0;
+                menuMusic.play();
+            });
+
+            gameMusic.addEventListener('ended', function() {
+                gameMusic.currentTime = 0;
+                gameMusic.play();
+            });
+
+            document.addEventListener('click', function initAudio() {
+                menuMusic.volume = gameSettings.muted ? 0 : gameSettings.volume / 100;
+                const playPromise = menuMusic.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        console.log('Lecture de la musique démarrée avec succès');
+                    }).catch(error => {
+                        console.error('Erreur lors de la lecture de la musique:', error);
+                    });
+                }
+                
+                document.removeEventListener('click', initAudio);
+            });
+        }
+
+        function updateLanguage(lang) {
+            gameSettings.language = lang;
+            
+            document.querySelector('button[onclick="startGame()"]').textContent = translations[lang].play;
+            document.querySelector('button[onclick="showSettings()"]').textContent = translations[lang].settings;
+            document.querySelector('button[onclick="showInfo()"]').textContent = translations[lang].info;
+            
+            document.querySelectorAll('.setting-title').forEach(title => {
+                if (title.textContent.includes('Volume')) title.textContent = translations[lang].volume;
+                if (title.textContent.includes('Langue')) title.textContent = translations[lang].language;
+                if (title.textContent.includes('Clavier')) title.textContent = translations[lang].keyboard;
+            });
+            
+            document.querySelectorAll('.button').forEach(button => {
+                if (button.textContent.includes('SAUVEGARDER')) button.textContent = translations[lang].save;
+                if (button.textContent.includes('RETOUR')) button.textContent = translations[lang].back;
+            });
+            
+            document.querySelector('.info-text').textContent = translations[lang].welcome;
+            document.querySelector('.controls-list h3').textContent = translations[lang].controls;
+            
+            const controlsList = document.querySelector('.controls-list');
+            const controls = controlsList.querySelectorAll('p');
+            controls[0].textContent = translations[lang].moveControls;
+            controls[1].textContent = translations[lang].jumpControl;
+            controls[2].textContent = translations[lang].shootControl;
+            controls[3].textContent = translations[lang].aimControl;
+            
+            const languageLabels = document.querySelectorAll('input[name="language"] + span');
+            languageLabels[0].textContent = translations[lang].french;
+            languageLabels[1].textContent = translations[lang].english;
+        }
+
+        function toggleClouds(show) {
+            clouds.forEach(cloud => {
+                cloud.style.display = show ? 'block' : 'none';
+            });
+        }
+
+        function showMenu() {
+            document.getElementById('menu').style.display = 'block';
+            document.getElementById('settings-panel').style.display = 'none';
+            document.getElementById('info-panel').style.display = 'none';
+            toggleClouds(true);
+        }
+
+        function showSettings() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('settings-panel').style.display = 'block';
+            document.getElementById('info-panel').style.display = 'none';
+            toggleClouds(true);
+            
+            volumeSlider.value = gameSettings.volume;
+            volumeValue.textContent = gameSettings.volume + '%';
+            document.querySelector(`input[name="language"][value="${gameSettings.language}"]`).checked = true;
+            document.querySelector(`input[name="keyboard"][value="${gameSettings.keyboard}"]`).checked = true;
+        }
+
+        function showInfo() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('settings-panel').style.display = 'none';
+            document.getElementById('info-panel').style.display = 'block';
+            toggleClouds(true);
+        }
+
+        function startGame() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            toggleClouds(false);
+            
+            if (menuMusic) {
+                menuMusic.volume = gameSettings.muted ? 0 : (gameSettings.volume / 100) * 0.3; // Volume réduit pendant le jeu
+            }
+            
+            if (gameMusic && gameMusic.play) {
+                gameMusic.volume = gameSettings.muted ? 0 : (gameSettings.volume / 100) * 0.7;
+                const playPromise = gameMusic.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        console.log('Musique du jeu démarrée');
+                        
+                        let fadeInterval = setInterval(() => {
+                            if (menuMusic && menuMusic.volume > 0) {
+                                menuMusic.volume = Math.max(0, menuMusic.volume - 0.1);
+                            }
+                            if (gameMusic.volume < (gameSettings.muted ? 0 : (gameSettings.volume / 100))) {
+                                gameMusic.volume = Math.min(
+                                    gameSettings.muted ? 0 : (gameSettings.volume / 100),
+                                    gameMusic.volume + 0.1
+                                );
+                            }
+                            if (menuMusic.volume === 0 && gameMusic.volume >= (gameSettings.muted ? 0 : (gameSettings.volume / 100))) {
+                                clearInterval(fadeInterval);
+                            }
+                        }, 100);
+                    }).catch(error => {
+                        console.error('Erreur lors du démarrage de la musique du jeu:', error);
+                    });
+                }
+            }
+            
+            const canvas = document.getElementById('renderCanvas');
+            const engine = new BABYLON.Engine(canvas, true);
+            import('./game.js').then(module => {
+                window.game = new module.default(gameSettings);
+            });
+        }
+
+        function saveSettings() {
+            gameSettings.volume = parseInt(volumeSlider.value);
+            const newLanguage = document.querySelector('input[name="language"]:checked').value;
+            gameSettings.keyboard = document.querySelector('input[name="keyboard"]:checked').value;
+            
+            if (newLanguage !== gameSettings.language) {
+                updateLanguage(newLanguage);
+            }
+            
+            const volume = gameSettings.muted ? 0 : gameSettings.volume / 100;
+            if (menuMusic) {
+                menuMusic.volume = volume;
+                console.log('Volume du menu mis à jour:', volume);
+            }
+            if (gameMusic) {
+                gameMusic.volume = volume * 0.7;
+                console.log('Volume du jeu mis à jour:', volume * 0.7);
+            }
+            
+            showMenu();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initializeMusic();
+            updateLanguage(gameSettings.language);
+            toggleClouds(true); 
+        });
+
+        window.addEventListener('resize', function() {
+            if (window.game && window.game.engine) {
+                window.game.engine.resize();
+            }
+        });
+
+        function updateMusicVolume() {
+            const menuVolume = gameSettings.muted ? 0 : gameSettings.volume / 100;
+            const gameVolume = gameSettings.muted ? 0 : (gameSettings.volume / 100) * 0.7;
+            
+            if (menuMusic) menuMusic.volume = menuVolume;
+            if (gameMusic) gameMusic.volume = gameVolume;
+        }
+    </script>
 </body>
 </html> 
