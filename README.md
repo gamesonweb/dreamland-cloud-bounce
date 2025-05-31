@@ -21,10 +21,15 @@ Cloud Bounce est un jeu de plateforme 3D se déroulant dans un monde onirique qu
 - Porte finale pour terminer le niveau
 
 ## Contrôles
-- ZQSD : Déplacement
+- ZQSD/WASD : Déplacement (AZERTY/QWERTY)
 - Espace : Saut
-- Clic gauche : Tirer
-- Clic droit : Viser
+- Shift : Sprint/Courir
+- V : Changer de vue (Première/Troisième personne)
+- A/Q : Arme précédente (QWERTY/AZERTY)
+- E : Arme suivante
+- Clic gauche : 
+  - Arc : Maintenir pour charger, relâcher pour tirer
+  - Épée : Attaquer
 
 ## Objectifs de développement futurs
 - Système d'armes variées à collecter
