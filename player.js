@@ -97,6 +97,39 @@ class Player {
         // 添加武器相关属性
         this.currentWeapon = "bow";
         this.weaponCooldown = 0;
+
+        // 键盘布局配置
+        this.keyboardLayouts = {
+            qwerty: {
+                forward: "w",
+                backward: "s",
+                left: "a",
+                right: "d",
+                jump: " "
+            },
+            azerty: {
+                forward: "z",
+                backward: "s",
+                left: "q",
+                right: "d",
+                jump: " "
+            }
+        };
+
+        // 从本地存储或游戏设置获取键盘布局
+        this.currentLayout = localStorage.getItem('keyboard') || window.gameSettings?.keyboard || 'azerty';
+        
+        // 添加键盘布局变更监听器
+        this.setupKeyboardLayoutListener();
+        
+        console.log('Initial keyboard layout:', this.currentLayout);
+    }
+
+    setupKeyboardLayoutListener() {
+        window.addEventListener('keyboardLayoutChanged', (event) => {
+            console.log('Keyboard layout changed event received:', event.detail.layout);
+            this.currentLayout = event.detail.layout;
+        });
     }
 
     initializeControls() {
@@ -106,13 +139,21 @@ class Player {
         window.addEventListener("keydown", (evt) => {
             this.keys[evt.key.toLowerCase()] = true;
             
-            // Q键切换到上一个武器
-            if (evt.key.toLowerCase() === 'q') {
-                this.game.weaponUI.switchToPreviousWeapon();
-            }
-            // E键切换到下一个武器
-            if (evt.key.toLowerCase() === 'e') {
-                this.game.weaponUI.switchToNextWeapon();
+            // 根据当前键盘布局判断武器切换键
+            if (this.currentLayout === 'qwerty') {
+                if (evt.key.toLowerCase() === 'q') {
+                    this.game.weaponUI.switchToPreviousWeapon();
+                }
+                if (evt.key.toLowerCase() === 'e') {
+                    this.game.weaponUI.switchToNextWeapon();
+                }
+            } else if (this.currentLayout === 'azerty') {
+                if (evt.key.toLowerCase() === 'a') {
+                    this.game.weaponUI.switchToPreviousWeapon();
+                }
+                if (evt.key.toLowerCase() === 'e') {
+                    this.game.weaponUI.switchToNextWeapon();
+                }
             }
         });
         window.addEventListener("keyup", (evt) => {
@@ -198,23 +239,21 @@ class Player {
             // 获取当前移动速度（是否按住shift键）
             const currentSpeed = this.keys["shift"] ? this.sprintSpeed : this.moveSpeed;
 
-            // 处理移动
-            if (this.keys["w"]) {
-                this.playerVelocity.addInPlace(forward.scale(currentSpeed));
-            }
-            if (this.keys["s"]) {
-                this.playerVelocity.addInPlace(forward.scale(-currentSpeed));
-            }
-            if (this.keys["a"]) {
-                this.playerVelocity.addInPlace(right.scale(-currentSpeed));
-            }
-            if (this.keys["d"]) {
-                this.playerVelocity.addInPlace(right.scale(currentSpeed));
+            // 使用当前布局的按键进行移动判定
+            if (this.currentLayout === 'qwerty') {
+                if (this.keys['w']) this.playerVelocity.addInPlace(forward.scale(currentSpeed));
+                if (this.keys['s']) this.playerVelocity.addInPlace(forward.scale(-currentSpeed));
+                if (this.keys['a']) this.playerVelocity.addInPlace(right.scale(-currentSpeed));
+                if (this.keys['d']) this.playerVelocity.addInPlace(right.scale(currentSpeed));
+            } else { // azerty
+                if (this.keys['z']) this.playerVelocity.addInPlace(forward.scale(currentSpeed));
+                if (this.keys['s']) this.playerVelocity.addInPlace(forward.scale(-currentSpeed));
+                if (this.keys['q']) this.playerVelocity.addInPlace(right.scale(-currentSpeed));
+                if (this.keys['d']) this.playerVelocity.addInPlace(right.scale(currentSpeed));
             }
 
             // 处理跳跃
-            if (this.keys[" "]) {
-                // 当在地面或平台上时都可以跳跃
+            if (this.keys[' ']) {
                 if (!this.isJumping || this.isOnPlatform) {
                     this.playerVelocity.y = this.jumpForce;
                     this.isJumping = true;

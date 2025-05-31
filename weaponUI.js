@@ -32,7 +32,75 @@ class WeaponUI {
         // 存储武器类型数组，用于循环切换
         this.weaponTypes = Object.keys(this.weapons);
 
+        // 添加语言配置
+        this.languages = {
+            fr: {
+                sword: "Épée",
+                bow: "Arc",
+                damage: "Dégâts",
+                range: "Portée",
+                attackSpeed: "Vitesse d'attaque"
+            },
+            en: {
+                sword: "Sword",
+                bow: "Bow",
+                damage: "Damage",
+                range: "Range",
+                attackSpeed: "Attack Speed"
+            }
+        };
+
+        // 从游戏设置中获取初始语言
+        this.currentLanguage = window.gameSettings?.language || 'fr';
+
+        // 添加语言变更监听器
+        this.setupLanguageListener();
+
         this.createWeaponUI();
+    }
+
+    setupLanguageListener() {
+        // 监听语言变化
+        window.addEventListener('languageChanged', (event) => {
+            const newLanguage = event.detail.language;
+            if (newLanguage !== this.currentLanguage) {
+                this.currentLanguage = newLanguage;
+                this.updateAllText();
+            }
+        });
+    }
+
+    updateAllText() {
+        const panel = this.advancedTexture.getControlByName("weaponPanel");
+        if (!panel) return;
+
+        panel.children.forEach((buttonContainer, index) => {
+            if (!buttonContainer || !buttonContainer.children) return;
+
+            const weaponType = this.weaponTypes[index];
+            if (!weaponType) return;
+
+            const weapon = this.weapons[weaponType];
+            if (!weapon) return;
+
+            // 更新武器名称
+            weapon.name = this.languages[this.currentLanguage][weaponType];
+
+            // 查找并更新提示文本
+            const tooltips = this.advancedTexture.getControlsByType("Rectangle")
+                .filter(control => control.name === "tooltip");
+            
+            tooltips.forEach(tooltip => {
+                if (tooltip && tooltip.children && tooltip.children[0]) {
+                    const tooltipText = tooltip.children[0];
+                    tooltipText.text = 
+                        `${this.languages[this.currentLanguage][weaponType]}\n` +
+                        `${this.languages[this.currentLanguage].damage}: ${weapon.damage}\n` +
+                        `${this.languages[this.currentLanguage].range}: ${weapon.range}\n` +
+                        `${this.languages[this.currentLanguage].attackSpeed}: ${weapon.attackSpeed}`;
+                }
+            });
+        });
     }
 
     createWeaponUI() {

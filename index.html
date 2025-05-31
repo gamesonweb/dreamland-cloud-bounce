@@ -454,6 +454,12 @@
             initializeMusic();
             updateLanguage(gameSettings.language);
             toggleClouds(true);
+
+            const savedKeyboard = localStorage.getItem('keyboard') || 'azerty';
+            const keyboardInput = document.querySelector(`input[name="keyboard"][value="${savedKeyboard}"]`);
+            if (keyboardInput) {
+                keyboardInput.checked = true;
+            }
         });
 
         function showTutorial() {
@@ -661,7 +667,7 @@
         let gameSettings = {
             volume: 50,
             language: 'fr',
-            keyboard: 'azerty',
+            keyboard: localStorage.getItem('keyboard') || 'azerty',
             muted: false
         };
 
@@ -725,26 +731,45 @@
         function updateLanguage(lang) {
             gameSettings.language = lang;
             
+            // 首先检查元素是否存在
+            const elements = {
+                play: document.querySelector('button[onclick="startGame()"]'),
+                settings: document.querySelector('button[onclick="showSettings()"]'),
+                info: document.querySelector('button[onclick="showInfo()"]')
+            };
+
+            // 安全地更新按钮文本
+            if (elements.play) elements.play.textContent = translations[lang].play;
+            if (elements.settings) elements.settings.textContent = translations[lang].settings;
+            if (elements.info) elements.info.textContent = translations[lang].info;
+            
+            // 安全地更新设置标题
+            document.querySelectorAll('.setting-title').forEach(title => {
+                if (!title) return;
+                
+                const text = title.textContent || '';
+                if (text.includes('Volume')) title.textContent = translations[lang].volume;
+                if (text.includes('Langue') || text.includes('Language')) title.textContent = translations[lang].language;
+                if (text.includes('Clavier') || text.includes('Keyboard')) title.textContent = translations[lang].keyboard;
+            });
+            
+            // 安全地更新语言标签
+            const languageLabels = document.querySelectorAll('input[name="language"]');
+            languageLabels.forEach(input => {
+                const span = input.nextElementSibling;
+                if (!span) return;
+                
+                if (input.value === 'fr') span.textContent = translations[lang].french;
+                if (input.value === 'en') span.textContent = translations[lang].english;
+            });
+
+            // 更新其他可能的文本元素
             document.querySelectorAll('[data-translate]').forEach(element => {
                 const key = element.getAttribute('data-translate');
                 if (translations[lang][key]) {
                     element.textContent = translations[lang][key];
                 }
             });
-
-            document.querySelector('button[onclick="startGame()"]').textContent = translations[lang].play;
-            document.querySelector('button[onclick="showSettings()"]').textContent = translations[lang].settings;
-            document.querySelector('button[onclick="showInfo()"]').textContent = translations[lang].info;
-            
-            document.querySelectorAll('.setting-title').forEach(title => {
-                if (title.textContent.includes('Volume')) title.textContent = translations[lang].volume;
-                if (title.textContent.includes('Langue')) title.textContent = translations[lang].language;
-                if (title.textContent.includes('Clavier')) title.textContent = translations[lang].keyboard;
-            });
-            
-            const languageLabels = document.querySelectorAll('input[name="language"] + span');
-            languageLabels[0].textContent = translations[lang].french;
-            languageLabels[1].textContent = translations[lang].english;
         }
 
         function toggleClouds(show) {
@@ -768,8 +793,17 @@
             
             volumeSlider.value = gameSettings.volume;
             volumeValue.textContent = gameSettings.volume + '%';
-            document.querySelector(`input[name="language"][value="${gameSettings.language}"]`).checked = true;
-            document.querySelector(`input[name="keyboard"][value="${gameSettings.keyboard}"]`).checked = true;
+            
+            const currentKeyboard = localStorage.getItem('keyboard') || gameSettings.keyboard;
+            const keyboardInput = document.querySelector(`input[name="keyboard"][value="${currentKeyboard}"]`);
+            if (keyboardInput) {
+                keyboardInput.checked = true;
+            }
+            
+            const languageInput = document.querySelector(`input[name="language"][value="${gameSettings.language}"]`);
+            if (languageInput) {
+                languageInput.checked = true;
+            }
         }
 
         function showInfo() {
@@ -782,10 +816,27 @@
         function saveSettings() {
             gameSettings.volume = parseInt(volumeSlider.value);
             const newLanguage = document.querySelector('input[name="language"]:checked').value;
-            gameSettings.keyboard = document.querySelector('input[name="keyboard"]:checked').value;
+            const newKeyboard = document.querySelector('input[name="keyboard"]:checked').value;
             
+            // 处理语言变更
             if (newLanguage !== gameSettings.language) {
+                gameSettings.language = newLanguage;
+                const langEvent = new CustomEvent('languageChanged', {
+                    detail: { language: newLanguage }
+                });
+                window.dispatchEvent(langEvent);
                 updateLanguage(newLanguage);
+            }
+
+            // 处理键盘布局变更
+            if (newKeyboard !== gameSettings.keyboard) {
+                console.log('Changing keyboard layout to:', newKeyboard);
+                gameSettings.keyboard = newKeyboard;
+                localStorage.setItem('keyboard', newKeyboard);
+                const keyboardEvent = new CustomEvent('keyboardLayoutChanged', {
+                    detail: { layout: newKeyboard }
+                });
+                window.dispatchEvent(keyboardEvent);
             }
             
             const volume = gameSettings.muted ? 0 : gameSettings.volume / 100;
