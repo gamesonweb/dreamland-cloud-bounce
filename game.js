@@ -14,7 +14,7 @@ import Enemies from './enemies.js';
 import WeaponUI from './weaponUI.js';
 
 class Game {
-    constructor() {
+    constructor(MapClass) {
         // 创建画布
         this.canvas = document.getElementById("renderCanvas");
         this.engine = new BABYLON.Engine(this.canvas, true);
@@ -22,9 +22,22 @@ class Game {
         
         // 在创建其他对象之前保存game引用
         this.scene.game = this;
+
+        // 等待物理引擎初始化
+        this.scene.enablePhysics(
+            new BABYLON.Vector3(0, -9.81, 0),
+            new BABYLON.AmmoJSPlugin()
+        );
         
         // 创建地形
-        this.terrain = new Terrain(this.scene);
+        if (MapClass) {
+            console.log('Creating map with class:', MapClass);
+            this.terrain = new MapClass(this.scene);
+            this.terrain.create(); // 调用地图的create方法
+        } else {
+            console.error('No map class provided');
+            this.terrain = new Terrain(this.scene); // 使用默认地形作为后备
+        }
         
         // 创建游戏对象
         this.gameObjects = new GameObjects(this.scene, this);

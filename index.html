@@ -320,6 +320,62 @@
         .tutorial-button:hover {
             background: #2980b9;
         }
+
+        .level-select-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 20px;
+        }
+
+        .level-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        .level-card:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .level-title {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .level-description {
+            font-size: 16px;
+            opacity: 0.8;
+        }
+
+        .back-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -419,6 +475,7 @@
     </audio>
 
     <!-- Babylon.js -->
+    <script src="https://preview.babylonjs.com/ammo.js"></script>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
     <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
@@ -543,30 +600,100 @@
         }
 
         function startGame() {
-            console.log('Démarrage du jeu...');
-            const lang = gameSettings.language;
-            
             document.getElementById('menu').style.display = 'none';
+            showLevelSelect();
+        }
+
+        function showLevelSelect() {
+            const lang = gameSettings.language;
+            const levelSelectHTML = `
+                <div class="level-select-container">
+                    <h1>${translations[lang].selectLevel}</h1>
+                    <div class="level-grid">
+                        <div class="level-card" onclick="loadLevel('tutorial')">
+                            <div class="level-title">${translations[lang].tutorialTitle}</div>
+                            <div class="level-description">${translations[lang].tutorialDesc}</div>
+                        </div>
+                        <div class="level-card" onclick="loadLevel('simple')">
+                            <div class="level-title">${translations[lang].simpleTitle}</div>
+                            <div class="level-description">${translations[lang].simpleDesc}</div>
+                        </div>
+                    </div>
+                    <button class="back-button" onclick="returnToMenu()">${translations[lang].back}</button>
+                </div>
+            `;
+
+            const container = document.createElement('div');
+            container.id = 'level-select';
+            container.innerHTML = levelSelectHTML;
+            document.body.appendChild(container);
+        }
+
+        function loadLevel(levelId) {
+            // 移除关卡选择界面
+            document.getElementById('level-select').remove();
+            
+            // 显示游戏容器
             document.getElementById('game-container').style.display = 'block';
             toggleClouds(false);
             
-            if (menuMusic) {
-                menuMusic.volume = gameSettings.muted ? 0 : (gameSettings.volume / 100) * 0.3;
-            }
-            
+            // 显示加载画面
             showLoadingScreen(true);
-            
-            setTimeout(() => {
-                showLoadingScreen(false);
-                showTutorial();
-            }, 500);
 
-            if (gameMusic && gameMusic.play) {
-                gameMusic.volume = gameSettings.muted ? 0 : (gameSettings.volume / 100) * 0.7;
-                gameMusic.play().catch(error => {
-                    console.error('Erreur lors du démarrage de la musique:', error);
-                });
+            // 根据关卡ID加载不同的地图
+            let mapPromise;
+            switch(levelId) {
+                case 'tutorial':
+                    mapPromise = import('./terrain.js');
+                    break;
+                case 'simple':
+                    mapPromise = import('./simple_map.js');
+                    break;
+                default:
+                    console.error('Unknown level:', levelId);
+                    return;
             }
+
+            mapPromise
+                .then(module => {
+                    if (typeof module.default === 'function') {
+                        initializeGame(module.default);
+                    } else {
+                        console.error('Invalid map module:', module);
+                        showLoadingScreen(false);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading map:', error);
+                    showLoadingScreen(false);
+                });
+        }
+
+        function initializeGame(MapClass) {
+            // 等待 Ammo.js 初始化完成
+            if (typeof Ammo === 'function') {
+                Ammo().then(function(Ammo) {
+                    import('./game.js').then(module => {
+                        window.game = new module.default(MapClass);
+                        showLoadingScreen(false);
+                    }).catch(error => {
+                        console.error('Error initializing game:', error);
+                        showLoadingScreen(false);
+                    });
+                });
+            } else {
+                console.error('Ammo.js not loaded properly');
+                showLoadingScreen(false);
+            }
+        }
+
+        function returnToMenu() {
+            const levelSelect = document.getElementById('level-select');
+            if (levelSelect) {
+                levelSelect.remove();
+            }
+            document.getElementById('menu').style.display = 'block';
+            toggleClouds(true);
         }
 
         const translations = {
@@ -614,7 +741,12 @@
                 loading: "Chargement en cours...",
                 loadingGame: "Chargement du jeu...",
                 loadingAssets: "Chargement des ressources...",
-                loadingComplete: "Chargement terminé !"
+                loadingComplete: "Chargement terminé !",
+                selectLevel: "Sélectionner un niveau",
+                tutorialTitle: "Tutoriel",
+                tutorialDesc: "Apprenez les mécaniques de base",
+                simpleTitle: "Niveau simple",
+                simpleDesc: "Essayez des sauts simples"
             },
             en: {
                 play: "PLAY",
@@ -660,7 +792,12 @@
                 loading: "Loading...",
                 loadingGame: "Loading game...",
                 loadingAssets: "Loading assets...",
-                loadingComplete: "Loading complete!"
+                loadingComplete: "Loading complete!",
+                selectLevel: "Select Level",
+                tutorialTitle: "Tutorial",
+                tutorialDesc: "Learn basic mechanics",
+                simpleTitle: "Simple Level",
+                simpleDesc: "Try simple jumps"
             }
         };
 
@@ -770,6 +907,24 @@
                     element.textContent = translations[lang][key];
                 }
             });
+
+            // 如果关卡选择界面正在显示，更新它的文本
+            const levelSelect = document.getElementById('level-select');
+            if (levelSelect) {
+                const title = levelSelect.querySelector('h1');
+                const tutorialTitle = levelSelect.querySelector('.level-card:first-child .level-title');
+                const tutorialDesc = levelSelect.querySelector('.level-card:first-child .level-description');
+                const simpleTitle = levelSelect.querySelector('.level-card:last-child .level-title');
+                const simpleDesc = levelSelect.querySelector('.level-card:last-child .level-description');
+                const backButton = levelSelect.querySelector('.back-button');
+
+                if (title) title.textContent = translations[lang].selectLevel;
+                if (tutorialTitle) tutorialTitle.textContent = translations[lang].tutorialTitle;
+                if (tutorialDesc) tutorialDesc.textContent = translations[lang].tutorialDesc;
+                if (simpleTitle) simpleTitle.textContent = translations[lang].simpleTitle;
+                if (simpleDesc) simpleDesc.textContent = translations[lang].simpleDesc;
+                if (backButton) backButton.textContent = translations[lang].back;
+            }
         }
 
         function toggleClouds(show) {
