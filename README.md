@@ -2,6 +2,8 @@
 
 🎮 **Jouer maintenant : [https://gamesonweb.github.io/dreamland-cloud-bounce/](https://gamesonweb.github.io/dreamland-cloud-bounce/)**
 
+🎥 **Vidéo de démonstration : [Regarder la vidéo](https://drive.google.com/file/d/10HwPQT9vRPxAr-4p1mqlqTfJu95qnT2G/view?usp=sharing)**
+
 ## Équipe
 - ZHANG Boyu
 - Mathéo BALAZUC  
