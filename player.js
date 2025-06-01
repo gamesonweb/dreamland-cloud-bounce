@@ -56,15 +56,9 @@ class Player {
         // 创建UI纹理
         this.advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("playerUI");
 
-        // 创建玩家模型
-        this.mesh = BABYLON.MeshBuilder.CreateBox("player", {
-            size: 1
-        }, scene);
-        this.mesh.position = position;
-        this.mesh.checkCollisions = true;
-        this.mesh.ellipsoid = new BABYLON.Vector3(0.5, 0.5, 0.5);
-        this.mesh.ellipsoidOffset = new BABYLON.Vector3(0, 0.5, 0); // 添加碰撞体积偏移
-        this.mesh.isPickable = true; // 使模型可被选中/碰撞
+        // 初始化位置
+        this.position = position || new BABYLON.Vector3(0, 2, 0);
+        this.mesh = null;
 
         // 设置摄像机
         this.camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, this.eyeHeight, 0), scene);
@@ -76,7 +70,7 @@ class Player {
         this.camera.checkCollisions = true;
         this.camera.applyGravity = true;
         this.camera.ellipsoid = new BABYLON.Vector3(0.5, 0.5, 0.5);
-        this.camera.ellipsoidOffset = new BABYLON.Vector3(0, 0.5, 0); // 添加相机碰撞体积偏移
+        this.camera.ellipsoidOffset = new BABYLON.Vector3(0, 0.5, 0);
 
         // 添加准星GUI
         this.createCrosshair();
@@ -123,6 +117,9 @@ class Player {
         this.setupKeyboardLayoutListener();
         
         console.log('Initial keyboard layout:', this.currentLayout);
+
+        // 加载玩家模型
+        this.loadPlayerModel();
     }
 
     setupKeyboardLayoutListener() {
@@ -186,8 +183,7 @@ class Player {
             if (this.isPointerLocked) {
                 // 水平旋转
                 this.playerRotation += evt.movementX * 0.005;
-                this.mesh.rotation.y = this.playerRotation;
-
+                
                 // 垂直旋转（根据视角模式设置不同的限制）
                 const verticalRotationFactor = this.isFirstPerson ? -1 : 1;
                 this.playerVerticalRotation += evt.movementY * 0.005 * verticalRotationFactor;
@@ -197,6 +193,11 @@ class Player {
                 const minAngle = this.isFirstPerson ? -Math.PI/2.1 : -Math.PI/6;
                 const maxAngle = this.isFirstPerson ? Math.PI/2.1 : Math.PI/3;
                 this.playerVerticalRotation = Math.max(minAngle, Math.min(maxAngle, this.playerVerticalRotation));
+
+                // 立即更新模型旋转
+                if (this.mesh) {
+                    this.mesh.rotation.y = this.playerRotation;
+                }
             }
         };
 
@@ -240,16 +241,32 @@ class Player {
             const currentSpeed = this.keys["shift"] ? this.sprintSpeed : this.moveSpeed;
 
             // 使用当前布局的按键进行移动判定
+            let isMoving = false;
             if (this.currentLayout === 'qwerty') {
-                if (this.keys['w']) this.playerVelocity.addInPlace(forward.scale(currentSpeed));
-                if (this.keys['s']) this.playerVelocity.addInPlace(forward.scale(-currentSpeed));
-                if (this.keys['a']) this.playerVelocity.addInPlace(right.scale(-currentSpeed));
-                if (this.keys['d']) this.playerVelocity.addInPlace(right.scale(currentSpeed));
+                if (this.keys['w']) { this.playerVelocity.addInPlace(forward.scale(currentSpeed)); isMoving = true; }
+                if (this.keys['s']) { this.playerVelocity.addInPlace(forward.scale(-currentSpeed)); isMoving = true; }
+                if (this.keys['a']) { this.playerVelocity.addInPlace(right.scale(-currentSpeed)); isMoving = true; }
+                if (this.keys['d']) { this.playerVelocity.addInPlace(right.scale(currentSpeed)); isMoving = true; }
             } else { // azerty
-                if (this.keys['z']) this.playerVelocity.addInPlace(forward.scale(currentSpeed));
-                if (this.keys['s']) this.playerVelocity.addInPlace(forward.scale(-currentSpeed));
-                if (this.keys['q']) this.playerVelocity.addInPlace(right.scale(-currentSpeed));
-                if (this.keys['d']) this.playerVelocity.addInPlace(right.scale(currentSpeed));
+                if (this.keys['z']) { this.playerVelocity.addInPlace(forward.scale(currentSpeed)); isMoving = true; }
+                if (this.keys['s']) { this.playerVelocity.addInPlace(forward.scale(-currentSpeed)); isMoving = true; }
+                if (this.keys['q']) { this.playerVelocity.addInPlace(right.scale(-currentSpeed)); isMoving = true; }
+                if (this.keys['d']) { this.playerVelocity.addInPlace(right.scale(currentSpeed)); isMoving = true; }
+            }
+
+            // 更新动画状态
+            if (this.mesh && this.mesh.skeleton) {
+                if (this.isJumping) {
+                    this.playAnimation('jump');
+                } else if (isMoving) {
+                    if (this.keys["shift"]) {
+                        this.playAnimation('run');
+                    } else {
+                        this.playAnimation('walk');
+                    }
+                } else {
+                    this.playAnimation('idle');
+                }
             }
 
             // 处理跳跃
@@ -258,6 +275,11 @@ class Player {
                     this.playerVelocity.y = this.jumpForce;
                     this.isJumping = true;
                     this.isOnPlatform = false;
+                    
+                    // 播放跳跃动画
+                    if (this.mesh && this.mesh.skeleton) {
+                        this.playAnimation('jump');
+                    }
                 }
             }
 
@@ -277,11 +299,16 @@ class Player {
             const newPosition = this.mesh.position.add(this.playerVelocity);
             
             // 地面碰撞检测
-            if (newPosition.y <= 1) {
-                newPosition.y = 1;
+            if (newPosition.y <= 0) {
+                newPosition.y = 0;
                 this.playerVelocity.y = 0;
                 this.isJumping = false;
-                this.isOnPlatform = false;
+                this.isOnPlatform = true;
+                
+                // 落地后播放待机动画
+                if (this.mesh && this.mesh.skeleton) {
+                    this.playAnimation('idle');
+                }
             }
 
             // 更新位置
@@ -290,32 +317,36 @@ class Player {
 
         // 更新相机位置和旋转
         if (this.isFirstPerson) {
-            // 第一人称视角 - 直接设置相机位置和旋转
-            this.camera.position = new BABYLON.Vector3(
-                this.mesh.position.x,
-                this.mesh.position.y + this.eyeHeight,
-                this.mesh.position.z
+            // 第一人称视角
+            const cameraOffset = new BABYLON.Vector3(
+                Math.sin(this.playerRotation) * 0.5,
+                this.eyeHeight,
+                Math.cos(this.playerRotation) * 0.5
             );
             
+            this.camera.position = this.mesh.position.add(cameraOffset);
+            
             // 计算相机目标点
-            const forward = new BABYLON.Vector3(
+            const targetOffset = new BABYLON.Vector3(
                 Math.sin(this.playerRotation) * Math.cos(this.playerVerticalRotation),
                 Math.sin(this.playerVerticalRotation),
                 Math.cos(this.playerRotation) * Math.cos(this.playerVerticalRotation)
             );
             
-            // 设置相机朝向
-            const target = this.camera.position.add(forward);
-            this.camera.setTarget(target);
+            this.camera.setTarget(this.camera.position.add(targetOffset));
+
+            // 更新模型旋转
+            if (this.mesh) {
+                this.mesh.rotation.y = this.playerRotation;
+            }
         } else {
-            // 第三人称视角（吃鸡风格）
-            // 根据垂直旋转角度计算相机距离
+            // 第三人称视角
             const baseDistance = this.cameraDistance;
-            const pullBackFactor = Math.max(0, this.playerVerticalRotation) / (Math.PI/3); // 根据向上角度计算拉远系数
+            const pullBackFactor = Math.max(0, this.playerVerticalRotation) / (Math.PI/3);
             const currentDistance = baseDistance + (this.maxPullBack * pullBackFactor);
 
-            // 计算理想的相机位置，加入垂直旋转的影响
-            const idealOffset = new BABYLON.Vector3(
+            // 计算相机位置
+            const cameraOffset = new BABYLON.Vector3(
                 -Math.sin(this.playerRotation) * Math.cos(this.playerVerticalRotation) * currentDistance,
                 this.cameraHeight + Math.sin(this.playerVerticalRotation) * currentDistance,
                 -Math.cos(this.playerRotation) * Math.cos(this.playerVerticalRotation) * currentDistance
@@ -324,18 +355,27 @@ class Player {
             // 平滑相机移动
             this.cameraOffset = BABYLON.Vector3.Lerp(
                 this.cameraOffset,
-                idealOffset,
+                cameraOffset,
                 this.cameraSmoothFactor
             );
 
             // 设置相机位置
-            const cameraPosition = this.mesh.position.add(this.cameraOffset);
-            this.camera.position = cameraPosition;
+            this.camera.position = this.mesh.position.add(this.cameraOffset);
 
-            // 设置相机目标点（考虑垂直旋转）
+            // 设置相机目标点
             const targetPosition = this.mesh.position.clone();
             targetPosition.y += this.cameraTargetHeight;
             this.camera.setTarget(targetPosition);
+
+            // 计算人物朝向（始终面向相机）
+            if (this.mesh) {
+                const direction = this.camera.position.subtract(this.mesh.position);
+                direction.y = 0; // 保持水平旋转
+                if (direction.length() > 0) {
+                    const targetRotation = Math.atan2(direction.x, direction.z);
+                    this.mesh.rotation.y = targetRotation;
+                }
+            }
         }
     }
 
@@ -1134,6 +1174,97 @@ class Player {
         if (this.arrowCountContainer) {
             this.arrowCountContainer.isVisible = this.currentWeapon === "bow";
         }
+    }
+
+    // 添加新方法用于加载玩家模型
+    loadPlayerModel() {
+        // 创建一个简单的立方体作为临时模型
+        this.mesh = BABYLON.MeshBuilder.CreateBox("player", {
+            height: 2,
+            width: 1,
+            depth: 1
+        }, this.scene);
+        
+        this.mesh.position = this.position;
+        this.mesh.checkCollisions = true;
+        this.mesh.ellipsoid = new BABYLON.Vector3(0.5, 0.5, 0.5);
+        this.mesh.ellipsoidOffset = new BABYLON.Vector3(0, 0.5, 0);
+        this.mesh.isPickable = true;
+
+        // 设置材质
+        const material = new BABYLON.StandardMaterial("playerMaterial", this.scene);
+        material.diffuseColor = new BABYLON.Color3(0, 0.5, 1);
+        this.mesh.material = material;
+
+        // 加载预制的动画模型
+        BABYLON.SceneLoader.ImportMesh("", "https://assets.babylonjs.com/meshes/", "HVGirl.glb", this.scene, (meshes, particleSystems, skeletons) => {
+            if (meshes && meshes.length > 0) {
+                // 替换临时模型
+                this.mesh.dispose();
+                this.mesh = meshes[0];
+                
+                // 设置位置和缩放
+                this.mesh.position = this.position;
+                this.mesh.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+                
+                // 设置碰撞检测
+                this.mesh.checkCollisions = true;
+                this.mesh.ellipsoid = new BABYLON.Vector3(0.5, 0.5, 0.5);
+                this.mesh.ellipsoidOffset = new BABYLON.Vector3(0, 0.5, 0);
+                this.mesh.isPickable = true;
+
+                // 设置动画
+                if (skeletons && skeletons.length > 0) {
+                    const skeleton = skeletons[0];
+                    
+                    // 创建动画组
+                    this.animations = {
+                        idle: this.scene.beginAnimation(skeleton, 0, 100, true),
+                        walk: this.scene.beginAnimation(skeleton, 100, 150, true),
+                        run: this.scene.beginAnimation(skeleton, 150, 200, true),
+                        jump: this.scene.beginAnimation(skeleton, 200, 250, false)
+                    };
+
+                    // 设置动画速度
+                    Object.entries(this.animations).forEach(([name, anim]) => {
+                        anim.speedRatio = name === 'run' ? 1.5 : 1.0;
+                    });
+
+                    // 初始播放待机动画
+                    this.animations.idle.start();
+                    this.animations.walk.stop();
+                    this.animations.jump.stop();
+                    this.animations.run.stop();
+                }
+
+                // 添加阴影
+                this.mesh.receiveShadows = true;
+                this.mesh.castShadows = true;
+
+                // 设置材质
+                if (this.mesh.material) {
+                    this.mesh.material.backFaceCulling = false;
+                    this.mesh.material.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+                }
+            }
+        });
+    }
+
+    // 简化动画控制方法
+    playAnimation(animationName) {
+        if (!this.animations || !this.animations[animationName]) {
+            return;
+        }
+
+        // 停止所有动画
+        Object.entries(this.animations).forEach(([name, anim]) => {
+            if (anim.isPlaying) {
+                anim.stop();
+            }
+        });
+
+        // 播放指定动画
+        this.animations[animationName].start();
     }
 }
 
