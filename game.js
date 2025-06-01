@@ -33,10 +33,13 @@ class Game {
         if (MapClass) {
             console.log('Creating map with class:', MapClass);
             this.terrain = new MapClass(this.scene);
-            this.terrain.create(); // 调用地图的create方法
+            if (typeof this.terrain.create === 'function') {
+                this.terrain.create();
+            }
         } else {
-            console.error('No map class provided');
+            console.log('Using default terrain');
             this.terrain = new Terrain(this.scene); // 使用默认地形作为后备
+            // Terrain类在构造函数中已经调用了createComplexTerrain()
         }
         
         // 创建游戏对象
@@ -72,8 +75,10 @@ class Game {
         
         // 开始渲染循环
         this.engine.runRenderLoop(() => {
-            this.player.update();
-            this.update();
+            if (this.player && this.player.mesh) {
+                this.player.update();
+                this.update();
+            }
             this.scene.render();
         });
         
@@ -160,109 +165,191 @@ class Game {
     }
 
     createUI() {
-        // 创建状态UI
+        // Créer une texture dynamique plein écran pour l'UI
         this.advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
-        
-        // 血量条容器
-        const healthContainer = new BABYLON.GUI.Rectangle("healthContainer");
-        healthContainer.width = "220px";
-        healthContainer.height = "30px";
-        healthContainer.cornerRadius = 10;
-        healthContainer.color = "white";
-        healthContainer.thickness = 2;
-        healthContainer.background = "#300000";
-        healthContainer.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        healthContainer.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-        healthContainer.left = "20px";
-        healthContainer.top = "20px";
-        this.advancedTexture.addControl(healthContainer);
-        
-        // 血量条
+
+        // --- Panneau pour la barre de santé ---
+        const healthPanel = new BABYLON.GUI.Rectangle("healthPanel");
+        healthPanel.width = "300px";
+        healthPanel.height = "40px";
+        healthPanel.cornerRadius = 20;
+        healthPanel.color = "white"; // Bordure blanche comme sur l'image
+        healthPanel.thickness = 2;
+        healthPanel.background = "rgba(0, 0, 0, 0.6)"; // Fond sombre semi-transparent
+        healthPanel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+        healthPanel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+        healthPanel.left = "20px";
+        healthPanel.top = "20px";
+        this.advancedTexture.addControl(healthPanel);
+
+        // StackPanel pour aligner horizontalement l'icône et la barre de santé
+        const healthRowStack = new BABYLON.GUI.StackPanel("healthRowStack");
+        healthRowStack.isVertical = false;
+        healthRowStack.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT; // Aligner à gauche du panneau
+        healthRowStack.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        healthRowStack.spacing = 10; // Espacement entre icône et barre
+        healthPanel.addControl(healthRowStack);
+
+        // Icône de santé
+        const healthIcon = new BABYLON.GUI.Image("healthIcon", "textures/heart-icon.png");
+        healthIcon.width = "30px";
+        healthIcon.height = "30px";
+        healthRowStack.addControl(healthIcon); // Ajouter au stack
+
+        // Conteneur/Background pour la barre de santé (le fond gris/rouge clair visible)
+        const healthBarBackground = new BABYLON.GUI.Rectangle("healthBarBackground");
+        healthBarBackground.width = "230px"; // Largeur ajustée
+        healthBarBackground.height = "25px"; // Hauteur ajustée
+        healthBarBackground.cornerRadius = 12; // Coins plus arrondis
+        healthBarBackground.color = "transparent"; // Pas de bordure visible
+        healthBarBackground.background = "rgba(255, 0, 0, 0.2)"; // Fond rouge semi-transparent
+        healthBarBackground.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT; // Aligner à gauche du stack
+        healthRowStack.addControl(healthBarBackground); // Ajouter au stack
+
+        // Barre de santé (Le remplissage rouge avec dégradé)
         this.healthBar = new BABYLON.GUI.Rectangle("healthBar");
-        this.healthBar.width = "200px";
-        this.healthBar.height = "20px";
-        this.healthBar.cornerRadius = 10;
+        this.healthBar.width = "100%"; // Commence pleine (remplira le conteneur background)
+        this.healthBar.height = "100%";
+        this.healthBar.cornerRadius = 12; // Coins arrondis
         this.healthBar.color = "transparent";
-        this.healthBar.background = "red";
-        this.healthBar.left = "-8px";
-        healthContainer.addControl(this.healthBar);
-        
-        // 血量文本
+        this.healthBar.background = "red"; // Remplissage rouge uni
+        this.healthBar.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT; // Remplissage à gauche
+        healthBarBackground.addControl(this.healthBar); // Ajouter au background
+
+        // Texte de santé (Superposé au centre de la barre)
         this.healthText = new BABYLON.GUI.TextBlock("healthText");
         this.healthText.text = "HP: 100/100";
         this.healthText.color = "white";
-        this.healthText.fontSize = 16;
-        this.healthText.left = "5px";
-        healthContainer.addControl(this.healthText);
-        
-        // 经验条容器
-        const expContainer = new BABYLON.GUI.Rectangle("expContainer");
-        expContainer.width = "220px";
-        expContainer.height = "30px";
-        expContainer.cornerRadius = 10;
-        expContainer.color = "white";
-        expContainer.thickness = 2;
-        expContainer.background = "#000030";
-        expContainer.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        expContainer.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-        expContainer.left = "20px";
-        expContainer.top = "60px";
-        this.advancedTexture.addControl(expContainer);
-        
-        // 经验条
+        this.healthText.fontSize = 16; // Taille de police
+        this.healthText.fontFamily = "Arial";
+        this.healthText.outlineWidth = 1;
+        this.healthText.outlineColor = "black";
+        healthBarBackground.addControl(this.healthText); // Ajouter au background pour le superposer
+
+        // --- Panneau pour la barre d'expérience (Positionné en dessous) ---
+        const expPanel = new BABYLON.GUI.Rectangle("expPanel");
+        expPanel.width = "300px";
+        expPanel.height = "40px";
+        expPanel.cornerRadius = 20;
+        expPanel.color = "white"; // Bordure blanche
+        expPanel.thickness = 2;
+        expPanel.background = "rgba(0, 0, 0, 0.6)"; // Fond sombre semi-transparent
+        expPanel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+        expPanel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+        expPanel.left = "20px";
+        expPanel.top = "70px"; // Positionné 50px plus bas que le panneau de santé
+        this.advancedTexture.addControl(expPanel);
+
+        // StackPanel pour aligner horizontalement l'icône et la barre d'expérience
+        const expRowStack = new BABYLON.GUI.StackPanel("expRowStack");
+        expRowStack.isVertical = false;
+        expRowStack.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT; // Aligner à gauche du panneau
+        expRowStack.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        expRowStack.spacing = 10; // Espacement entre icône et barre
+        expPanel.addControl(expRowStack);
+
+        // Icône d'expérience
+        const expIcon = new BABYLON.GUI.Image("expIcon", "textures/exp-icon.png");
+        expIcon.width = "30px";
+        expIcon.height = "30px";
+        expRowStack.addControl(expIcon); // Ajouter au stack
+
+        // Conteneur/Background pour la barre d'expérience
+        const expBarBackground = new BABYLON.GUI.Rectangle("expBarBackground");
+        expBarBackground.width = "230px"; // Largeur ajustée
+        expBarBackground.height = "25px"; // Hauteur ajustée
+        expBarBackground.cornerRadius = 12; // Coins plus arrondis
+        expBarBackground.color = "transparent"; // Pas de bordure visible
+        expBarBackground.background = "rgba(0, 0, 255, 0.2)"; // Fond bleu semi-transparent
+        expBarBackground.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT; // Aligner à gauche du stack
+        expRowStack.addControl(expBarBackground); // Ajouter au stack
+
+        // Barre d'expérience (Le remplissage bleu avec dégradé)
         this.expBar = new BABYLON.GUI.Rectangle("expBar");
-        this.expBar.width = "200px";
-        this.expBar.height = "20px";
-        this.expBar.cornerRadius = 10;
+        this.expBar.width = "0%"; // Commence vide
+        this.expBar.height = "100%";
+        this.expBar.cornerRadius = 12; // Coins arrondis
         this.expBar.color = "transparent";
-        this.expBar.background = "blue";
-        this.expBar.left = "-8px";
-        expContainer.addControl(this.expBar);
-        
-        // 经验文本
+        this.expBar.background = "blue"; // Remplissage bleu uni
+        this.expBar.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT; // Remplissage à gauche
+        expBarBackground.addControl(this.expBar); // Ajouter au background
+
+        // Texte d'expérience (Superposé au centre de la barre)
         this.expText = new BABYLON.GUI.TextBlock("expText");
         this.expText.text = "EXP: 0/100";
         this.expText.color = "white";
-        this.expText.fontSize = 16;
-        this.expText.left = "5px";
-        expContainer.addControl(this.expText);
-        
-        // 等级文本
+        this.expText.fontSize = 16; // Taille de police
+        this.expText.fontFamily = "Arial";
+        this.expText.outlineWidth = 1;
+        this.expText.outlineColor = "black";
+        expBarBackground.addControl(this.expText); // Ajouter au background pour le superposer
+
+        // --- Texte du niveau (Positionné à droite des panneaux) ---
         this.levelText = new BABYLON.GUI.TextBlock("levelText");
-        this.levelText.text = "Level 1";
-        this.levelText.color = "white";
-        this.levelText.fontSize = 24;
+        this.levelText.text = `Level ${this.playerStats.level}`;
+        this.levelText.color = "gold"; // Couleur or
+        this.levelText.fontSize = 24; // Taille de police
+        this.levelText.fontFamily = "Arial";
+        this.levelText.outlineWidth = 2;
+        this.levelText.outlineColor = "black";
         this.levelText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
         this.levelText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-        this.levelText.left = "250px";
+        this.levelText.left = "350px"; // Positionné à droite des panneaux
         this.levelText.top = "20px";
         this.advancedTexture.addControl(this.levelText);
     }
-    
+
     updatePlayerStats() {
-        // 确保血量在有效范围内
+        // Assurer que la santé est dans les limites valides
         this.playerStats.health = Math.max(0, Math.min(this.playerStats.health, this.playerStats.maxHealth));
-        
-        // 更新UI显示
-        const healthPercent = (this.playerStats.health / this.playerStats.maxHealth * 100).toFixed(1);
-        this.healthBar.width = `${healthPercent}%`;
-        this.healthText.text = `HP: ${Math.floor(this.playerStats.health)}/${this.playerStats.maxHealth}`;
-        
-        // 计算新的宽度
-        const newExpWidth = (this.playerStats.exp / this.playerStats.expToNextLevel * 200);
-        
-        // 创建动画
-        BABYLON.Animation.CreateAndStartAnimation("healthAnim", this.healthBar, "width", 30, 10, 
-            parseFloat(this.healthBar.width), healthPercent + "%", 0);
-        BABYLON.Animation.CreateAndStartAnimation("expAnim", this.expBar, "width", 30, 10, 
-            parseFloat(this.expBar.width), newExpWidth + "px", 0);
-        
-        // 检查升级
+
+        // Calculer les pourcentages
+        const healthPercent = (this.playerStats.health / this.playerStats.maxHealth);
+        const expPercent = (this.playerStats.exp / this.playerStats.expToNextLevel);
+
+        // Mettre à jour la largeur des barres de remplissage (en pourcentage) avec animation
+        if (this.healthBar) {
+             BABYLON.Animation.CreateAndStartAnimation(
+                "healthBarAnim",
+                this.healthBar,
+                "width",
+                30,
+                10,
+                parseFloat(this.healthBar.width),
+                (healthPercent * 100) + "%", // Utiliser des pourcentages
+                BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+            );
+        }
+        if (this.expBar) {
+             BABYLON.Animation.CreateAndStartAnimation(
+                "expBarAnim",
+                this.expBar,
+                "width",
+                30,
+                10,
+                parseFloat(this.expBar.width),
+                (expPercent * 100) + "%", // Utiliser des pourcentages
+                BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+            );
+        }
+
+        // Mettre à jour les textes
+        if (this.healthText) {
+            this.healthText.text = `HP: ${Math.floor(this.playerStats.health)}/${this.playerStats.maxHealth}`;
+        }
+         if (this.expText) {
+             this.expText.text = `EXP: ${this.playerStats.exp}/${this.playerStats.expToNextLevel}`;
+        }
+         if (this.levelText) {
+             this.levelText.text = `Level ${this.playerStats.level}`;
+         }
+
+        // Vérifier la montée de niveau
         if (this.playerStats.exp >= this.playerStats.expToNextLevel) {
             this.levelUp();
         }
     }
-    
+
     levelUp() {
         this.playerStats.level++;
         this.playerStats.exp -= this.playerStats.expToNextLevel;
@@ -533,7 +620,7 @@ class Game {
         expBarContainer.background = "rgba(0, 0, 0, 0.5)";
         expBarContainer.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
         expBarContainer.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
-        expBarContainer.top = "-30px";
+        expBarContainer.top = "-60px";
         this.advancedTexture.addControl(expBarContainer);
 
         // 创建经验条
